@@ -1,0 +1,74 @@
+[
+  {
+    "company": "Schrodinger",
+    "source_type": "greenhouse",
+    "token": "schrdinger",
+    "enabled": true
+  },
+  {
+    "company": "Isomorphic Labs",
+    "source_type": "greenhouse",
+    "token": "isomorphiclabs",
+    "enabled": true
+  },
+  {
+    "company": "Google DeepMind",
+    "source_type": "greenhouse",
+    "token": "deepmind",
+    "enabled": true
+  },
+  {
+    "company": "AQEMIA",
+    "source_type": "lever",
+    "token": "aqemia.com",
+    "enabled": true
+  },
+  {
+    "company": "Recursion",
+    "source_type": "greenhouse",
+    "token": "recursionpharmaceuticals",
+    "enabled": true
+  },
+  {
+    "company": "Genesis Therapeutics",
+    "source_type": "lever",
+    "token": "genesistherapeutics",
+    "enabled": true
+  },
+  {
+    "company": "1910 Genetics",
+    "source_type": "greenhouse",
+    "token": "1910genetics",
+    "enabled": true
+  },
+  {
+    "company": "SES AI",
+    "source_type": "greenhouse",
+    "token": "sesai",
+    "enabled": true
+  },
+  {
+    "company": "Eikon Therapeutics",
+    "source_type": "greenhouse",
+    "token": "eikontherapeutics",
+    "enabled": true
+  },
+  {
+    "company": "Superluminal Medicines",
+    "source_type": "greenhouse",
+    "token": "superluminalrx",
+    "enabled": true
+  },
+  {
+    "company": "Flagship Pioneering",
+    "source_type": "greenhouse",
+    "token": "flagshippioneeringinc",
+    "enabled": true
+  },
+  {
+    "company": "QuEra Computing",
+    "source_type": "greenhouse",
+    "token": "queracomputinginc",
+    "enabled": true
+  }
+]

@@ -1,0 +1,50 @@
+[
+  {
+    "company": "Schrodinger",
+    "title": "Materials Science Applications Scientist",
+    "location": "Mannheim, Germany",
+    "url": "https://example.org/jobs/1",
+    "description": "PhD role applying molecular dynamics, quantum mechanics, machine learning and Python to complex materials systems.",
+    "source": "sample"
+  },
+  {
+    "company": "University of Vienna",
+    "title": "Postdoctoral Researcher in Computational Biophysics",
+    "location": "Vienna, Austria",
+    "url": "https://example.org/jobs/2",
+    "description": "Use GROMACS, QM/MM, molecular dynamics and high-performance computing to study electron transfer in proteins.",
+    "source": "sample"
+  },
+  {
+    "company": "Isomorphic Labs",
+    "title": "Team Leader, Computational Drug Design",
+    "location": "London, United Kingdom",
+    "url": "https://example.org/jobs/3",
+    "description": "Lead computational chemistry and machine learning research.",
+    "source": "sample"
+  },
+  {
+    "company": "Schrodinger",
+    "title": "Account Manager, Strategic",
+    "location": "Germany",
+    "url": "https://example.org/jobs/4",
+    "description": "Sell computational chemistry software to pharmaceutical companies.",
+    "source": "sample"
+  },
+  {
+    "company": "Recursion",
+    "title": "Research Scientist, Molecular Dynamics",
+    "location": "Toronto, Canada",
+    "url": "https://example.org/jobs/5",
+    "description": "Develop molecular simulation and computational chemistry methods using HPC.",
+    "source": "sample"
+  },
+  {
+    "company": "Research Institute",
+    "title": "Postdoctoral Fellow in Electron Transfer",
+    "location": "",
+    "url": "https://example.org/jobs/6",
+    "description": "Molecular dynamics, DFT, QM/MM and Python for charge transport at protein-metal interfaces.",
+    "source": "sample"
+  }
+]
