@@ -50,7 +50,7 @@ def validate_profile(profile: dict[str, Any]) -> None:
 
 
 def validate_companies(companies: list[dict[str, Any]]) -> None:
-    token_sources = {"greenhouse", "lever", "ashby", "recruitee", "workable", "smartrecruiters", "workday"}
+    token_sources = {"greenhouse", "lever", "smartrecruiters", "workday"}
     url_sources = {
         "rss",
         "scholarshipdb",
@@ -74,11 +74,6 @@ def validate_companies(companies: list[dict[str, Any]]) -> None:
         "tyc",
         "helmholtz_ai",
         "embl_partners",
-        "mathjobs",
-        "jobrxiv",
-        "jobicy",
-        "himalayas",
-        "remotive",
         "restricted",
     }
     supported = token_sources | url_sources

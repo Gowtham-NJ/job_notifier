@@ -30,6 +30,13 @@
     "enabled": true
   },
   {
+    "company": "Genesis Therapeutics",
+    "source_type": "lever",
+    "token": "genesistherapeutics",
+    "enabled": false,
+    "disabled_reason": "The previous Lever endpoint currently returns HTTP 404. Re-enable after adding the current careers platform."
+  },
+  {
     "company": "1910 Genetics",
     "source_type": "greenhouse",
     "token": "1910genetics",
@@ -322,108 +329,6 @@
     "source_type": "rss",
     "url": "https://tue.varbi.com/what:rssfeed/",
     "enabled": true
-  },
-  {
-    "company": "Genesis Molecular AI",
-    "source_type": "ashby",
-    "token": "genesis-molecular-ai",
-    "enabled": true
-  },
-  {
-    "company": "Iambic Therapeutics",
-    "source_type": "ashby",
-    "token": "iambic-therapeutics",
-    "enabled": true
-  },
-  {
-    "company": "Relay Therapeutics",
-    "source_type": "greenhouse",
-    "token": "relaytherapeutics",
-    "enabled": true
-  },
-  {
-    "company": "Bicycle Therapeutics",
-    "source_type": "smartrecruiters",
-    "token": "BicycleTherapeutics",
-    "enabled": true
-  },
-  {
-    "company": "Output Biosciences",
-    "source_type": "ashby",
-    "token": "output",
-    "enabled": true
-  },
-  {
-    "company": "Proxima",
-    "source_type": "ashby",
-    "token": "proxima",
-    "enabled": true
-  },
-  {
-    "company": "Topos Bio",
-    "source_type": "ashby",
-    "token": "toposbio",
-    "enabled": true
-  },
-  {
-    "company": "AcademicKeys Sciences",
-    "source_type": "rss",
-    "url": "https://sciences.academickeys.com/rss",
-    "enabled": true
-  },
-  {
-    "company": "AcademicKeys Engineering",
-    "source_type": "rss",
-    "url": "https://engineering.academickeys.com/rss",
-    "enabled": true
-  },
-  {
-    "company": "MathJobs",
-    "source_type": "mathjobs",
-    "url": "https://www.mathjobs.org/jobs/list",
-    "enabled": true
-  },
-  {
-    "company": "jobRxiv",
-    "source_type": "jobrxiv",
-    "url": "https://jobrxiv.org/job-tag/chemistry/",
-    "urls": [
-      "https://jobrxiv.org/job-tag/chemistry/",
-      "https://jobrxiv.org/job-category/bioinfo/"
-    ],
-    "enabled": true
-  },
-  {
-    "company": "Jobicy Remote",
-    "source_type": "jobicy",
-    "url": "https://jobicy.com/api/v2/remote-jobs",
-    "queries": [
-      "computational chemistry",
-      "molecular dynamics",
-      "scientific computing",
-      "quantum chemistry"
-    ],
-    "count": 100,
-    "enabled": true
-  },
-  {
-    "company": "Himalayas Remote",
-    "source_type": "himalayas",
-    "url": "https://himalayas.app/jobs/api/search",
-    "queries": [
-      "computational chemistry",
-      "molecular dynamics",
-      "scientific computing",
-      "research scientist"
-    ],
-    "enabled": true
-  },
-  {
-    "company": "Remotive Remote",
-    "source_type": "remotive",
-    "url": "https://remotive.com/api/remote-jobs",
-    "enabled": false,
-    "disabled_reason": "The public API asks clients to poll only a few times per day; the main workflow runs every three hours. Enable only with a separate lower-frequency workflow."
   },
   {
     "company": "Nature Careers",

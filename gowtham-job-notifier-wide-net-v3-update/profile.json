@@ -41,11 +41,7 @@
     "biophysical modeler",
     "scientific software developer",
     "molecular software engineer",
-    "computational molecular engineer",
-    "cadd scientist",
-    "computational drug discovery scientist",
-    "molecular modeling scientist",
-    "molecular modelling scientist"
+    "computational molecular engineer"
   ],
   "title_role_terms": [
     "postdoctoral researcher",
@@ -134,16 +130,7 @@
     "machine learned potential",
     "neural network potential",
     "many-body potential",
-    "potential energy surface",
-    "cadd",
-    "computer-aided molecular design",
-    "binding free energy",
-    "molecular mechanics poisson-boltzmann surface area",
-    "mm/gbsa",
-    "mm/pbsa",
-    "openmm",
-    "namd",
-    "charmm"
+    "potential energy surface"
   ],
   "domain_terms": [
     "computational chemistry",
@@ -190,9 +177,7 @@
     "computational catalysis",
     "photochemistry",
     "excited-state dynamics",
-    "nonlinear optics",
-    "computational drug discovery",
-    "computer-aided drug design"
+    "nonlinear optics"
   ],
   "background_terms": [
     "gromacs",
@@ -267,11 +252,7 @@
     "doctoral scholarship",
     "studentship",
     "master thesis",
-    "master student",
-    "applied llm",
-    "large language model",
-    "talent sourcer",
-    "alliance management"
+    "master student"
   ],
   "negative_description_terms": [
     "wet-lab role",

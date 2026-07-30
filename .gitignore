@@ -1,0 +1,10 @@
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.env
+run_log.txt
+jobs.db
+bot_state.json
+.pytest_cache/
+.DS_Store

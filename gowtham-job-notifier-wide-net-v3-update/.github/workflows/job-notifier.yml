@@ -20,14 +20,6 @@ jobs:
     env:
       SLACK_WEBHOOK_ALL: ${{ secrets.SLACK_WEBHOOK_ALL }}
       SLACK_WEBHOOK_HIGH: ${{ secrets.SLACK_WEBHOOK_HIGH }}
-      DISCORD_WEBHOOK_ALL: ${{ secrets.DISCORD_WEBHOOK_ALL }}
-      DISCORD_WEBHOOK_HIGH: ${{ secrets.DISCORD_WEBHOOK_HIGH }}
-      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-      NTFY_TOPIC_URL: ${{ secrets.NTFY_TOPIC_URL }}
-      NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
-      PUSHOVER_APP_TOKEN: ${{ secrets.PUSHOVER_APP_TOKEN }}
-      PUSHOVER_USER_KEY: ${{ secrets.PUSHOVER_USER_KEY }}
       POST_RUN_SUMMARY: "false"
 
     steps:

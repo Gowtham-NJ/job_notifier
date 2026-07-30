@@ -12,7 +12,7 @@ from typing import Any
 from config import ConfigError, load_json, validate_companies, validate_profile
 from db import init_db, job_exists, make_dedup_key, save_job
 from filters import MatchResult, clean_text, evaluate_job
-from notifiers import post_job, post_status
+from slack_notifier import post_job, post_status
 from sources import fetch_jobs
 
 STATE_PATH = Path("bot_state.json")
@@ -54,6 +54,7 @@ def source_key(source: dict[str, Any]) -> str:
 def runtime_fingerprint(job: dict[str, Any]) -> str:
     """Collapse exact duplicate listings whose tracking URLs differ."""
     fields = (
+        job.get("source", ""),
         job.get("company", ""),
         job.get("title", ""),
         job.get("location", ""),

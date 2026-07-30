@@ -1,0 +1,210 @@
+WARNING: jobRxiv: 403 Client Error: Forbidden for url: https://jobrxiv.org/job-tag/chemistry/
+Schrodinger: fetched 19 jobs
+Isomorphic Labs: fetched 19 jobs
+Google DeepMind: fetched 10 jobs
+AQEMIA: fetched 6 jobs
+Recursion: fetched 21 jobs
+1910 Genetics: fetched 6 jobs
+SES AI: fetched 42 jobs
+Eikon Therapeutics: fetched 17 jobs
+Superluminal Medicines: fetched 9 jobs
+Flagship Pioneering: fetched 85 jobs
+QuEra Computing: fetched 68 jobs
+ResearchJobs.cz: fetched 14 jobs
+CCL.NET Jobs: fetched 19 jobs
+CHARMM-GUI Jobs: fetched 7 jobs
+EURAXESS: fetched 48 jobs
+AcademicTransfer: fetched 72 jobs
+jobs.ac.uk: fetched 35 jobs
+Jobbnorge: fetched 500 jobs
+Arbeitnow Europe: fetched 500 jobs
+Inria: fetched 27 jobs
+Thomas Young Centre: fetched 0 jobs
+Helmholtz AI Careers: fetched 6 jobs
+EMBL Partner Opportunities: fetched 2 jobs
+US-RSE Jobs: fetched 13 jobs
+MolSSI Molecular Sciences Jobs: fetched 6 jobs
+CECAM Careers: fetched 1 jobs
+AcademicJobsOnline: fetched 13 jobs
+ISCB Career Center: fetched 35 jobs
+Society of Research Software Engineering: fetched 10 jobs
+Max Planck Society: fetched 1 jobs
+Leibniz Association: fetched 8 jobs
+EMBL: fetched 25 jobs
+CERN: fetched 55 jobs
+Lund University: fetched 83 jobs
+KTH Royal Institute of Technology: fetched 73 jobs
+Uppsala University: fetched 72 jobs
+Stockholm University: fetched 65 jobs
+Umeå University: fetched 67 jobs
+Jönköping University: fetched 7 jobs
+Karolinska Institutet: fetched 101 jobs
+University of Oulu: fetched 25 jobs
+University of Eastern Finland: fetched 21 jobs
+Radboud University: fetched 26 jobs
+Karlstad University: fetched 16 jobs
+Eindhoven University of Technology: fetched 93 jobs
+Genesis Molecular AI: fetched 11 jobs
+Iambic Therapeutics: fetched 19 jobs
+Relay Therapeutics: fetched 11 jobs
+Bicycle Therapeutics: fetched 7 jobs
+Output Biosciences: fetched 10 jobs
+Proxima: fetched 9 jobs
+Topos Bio: fetched 0 jobs
+AcademicKeys Sciences: fetched 10 jobs
+AcademicKeys Engineering: fetched 10 jobs
+MathJobs: fetched 5 jobs
+Jobicy Remote: fetched 3 jobs
+Himalayas Remote: fetched 46 jobs
+DRY-RUN   score=34 priority=high     CCL.NET Jobs | Research Scientist/Postdoc Computational Chemistry/Biophysics/AI-Driven Drug Discovery | 
+           - core title: computational chemist, computational chemistry (+12)
+           - role type: postdoc, research scientist (+6)
+           - methods: molecular dynamics, free energy calculation, enhanced sampling, cheminformatics, metadynamics (+5)
+           - domain in title: computational chemistry, drug discovery (+6)
+           - domain: computational chemistry, computational biophysics, molecular modeling, drug discovery (+4)
+DRY-RUN   score=33 priority=high     Genesis Molecular AI | ML & Molecular Simulation Scientist | San Mateo, CA
+           - core title: molecular simulation, molecular simulation scientist (+12)
+           - role type: scientist, simulation scientist (+6)
+           - methods: molecular dynamics, quantum chemistry, free energy calculation, enhanced sampling, cheminformatics (+5)
+           - domain in title: molecular simulation (+3)
+           - domain: computational chemistry, molecular simulation, drug discovery, biomolecular simulation (+4)
+DRY-RUN   score=26 priority=high     CHARMM-GUI Jobs | Postdoctoral Scholar in Computational Biophysics | University of California, Merced
+           - core title: computational biophysics (+6)
+           - role type: postdoc, postdoctoral scholar (+6)
+           - methods: molecular dynamics, enhanced sampling, openmm, namd, charmm (+5)
+           - domain in title: computational biophysics (+3)
+           - domain: computational biophysics, molecular simulation, biomolecular simulation (+3)
+DRY-RUN   score=25 priority=high     SES AI | Computational Materials Scientist | Greater Boston (Woburn, MA) – On-site/Hybrid
+           - core title: computational materials scientist, computational materials (+12)
+           - role type: scientist (+3)
+           - methods: molecular dynamics, md simulation, density functional theory, dft, force field (+5)
+           - domain: materials science, ai for science (+2)
+           - background fit: quantum espresso, python, molecular dynamics (+3)
+DRY-RUN   score=25 priority=high     micro1 | Computational Chemistry Expert (PhD) | -11, -10, -9.5, -9, -8, -7, -6, -5, -4, -3.5, -3, -2, -1, 0, 1, 2, 3, 3.5, 4, 4.5, 5, 5.5, 5.75, 6, 6.5, 7, 8, 8.75, 9, 9.5, 10, 10.5, 11, 12, 12.75, 13, 14
+           - core title: computational chemist, computational chemistry (+12)
+           - methods: molecular dynamics, quantum chemistry, electronic structure, cheminformatics (+4)
+           - domain in title: computational chemistry (+3)
+           - domain: computational chemistry, molecular simulation, drug discovery (+3)
+           - background fit: gromacs, gaussian, python (+3)
+DRY-RUN   score=23 priority=high     AcademicTransfer | Postdoc in Physical and Theoretical Chemistry, Department of Quantum Nanoscience, TU Delft | Netherlands
+           - core title: theoretical chemist, theoretical chemistry (+12)
+           - role type: postdoc (+3)
+           - methods: dft, electronic structure, first-principles (+3)
+           - domain: molecular simulation, materials science, nanotechnology (+3)
+           - preferred location: netherlands (+2)
+DRY-RUN   score=22 priority=standard Eikon Therapeutics | Principal Scientist, Computational Chemistry | Millbrae, CA
+           - core title: computational chemist, computational chemistry (+12)
+           - role type: scientist (+3)
+           - methods: molecular dynamics, free energy calculation, cheminformatics, free energy perturbation (+4)
+           - domain in title: computational chemistry (+3)
+           - domain: computational chemistry, drug discovery, protein modeling (+3)
+DRY-RUN   score=18 priority=high     CCL.NET Jobs | Postdoc, AIDD and CADD, Beijing, China | 
+           - role type: postdoc (+3)
+           - methods in title: cadd (+3)
+           - methods: molecular dynamics, enhanced sampling, cheminformatics, molecular docking, cadd (+5)
+           - domain: computational chemistry, drug discovery, structural biology, computational structural biology (+4)
+           - background fit: gromacs, python, linux (+3)
+DRY-RUN   score=18 priority=high     CCL.NET Jobs | Postdoctoral position in molecular simulations of asymmetric biomembranes at Okayama University, Japan | 
+           - core title: molecular simulation (+6)
+           - role type: postdoc (+3)
+           - methods: molecular dynamics, coarse-grained, force field (+3)
+           - domain in title: molecular simulation (+3)
+           - domain: computational chemistry, molecular simulation (+2)
+DRY-RUN   score=18 priority=high     Hexalence | Research Software Engineer | Canada (Remote); Remote
+           - core title: research software engineer (+6)
+           - role type: research software engineer (+3)
+           - methods: molecular dynamics, density functional theory, dft (+3)
+           - domain: computational chemistry (+1)
+           - background fit: python, molecular dynamics, density functional theory (+3)
+DRY-RUN   score=18 priority=high     Schrodinger | Materials Science Applications Scientist | Mannheim
+           - role type: scientist, applications scientist (+6)
+           - methods: molecular dynamics, coarse-grained (+2)
+           - domain in title: materials science (+3)
+           - domain: molecular modeling, materials science, soft matter (+3)
+           - background fit: python, molecular dynamics (+2)
+DRY-RUN   score=17 priority=high     1910 Genetics | Computational Theoretical Chemist I | Boston, MA
+           - core title: theoretical chemist (+6)
+           - methods: molecular dynamics, md simulation, qm/mm, density functional theory, dft (+5)
+           - domain: computational chemistry, drug discovery, structural biology (+3)
+           - background fit: gromacs, python, hpc (+3)
+DRY-RUN   score=17 priority=high     1910 Genetics | Computational Theoretical Chemist II | Boston, MA
+           - core title: theoretical chemist (+6)
+           - methods: molecular dynamics, md simulation, qm/mm, density functional theory, dft (+5)
+           - domain: computational chemistry, drug discovery, structural biology (+3)
+           - background fit: gromacs, python, hpc (+3)
+DRY-RUN   score=17 priority=high     1910 Genetics | Computational Theoretical Chemist III | Boston, MA
+           - core title: theoretical chemist (+6)
+           - methods: molecular dynamics, md simulation, qm/mm, density functional theory, dft (+5)
+           - domain: computational chemistry, drug discovery, structural biology (+3)
+           - background fit: gromacs, python, hpc (+3)
+DRY-RUN   score=17 priority=high     OMSF | Research Software Engineer | Full Remote (4 Mar, 2025) OpenADMET – Research Software Engineer The Open Molecular Software Foundation (OMSF) is seeking a Research Software Engineer for the OpenADMET project (OpenADMET.org). This role is intended for a skilled computer programmer and debugger with a strong grounding in computer science. Experience with small molecules
+           - core title: research software engineer (+6)
+           - role type: research software engineer (+3)
+           - methods: scientific software development (+1)
+           - domain: computational chemistry, drug discovery (+2)
+           - background fit: python, hpc, git (+3)
+DRY-RUN   score=17 priority=high     Schrodinger | Machine Learning Force Field Scientist | New York
+           - role type: scientist (+3)
+           - methods in title: machine learning force field, force field (+6)
+           - methods: dft, electronic structure, force field (+3)
+           - domain: drug discovery, materials science (+2)
+           - background fit: python, numpy, scipy (+3)
+DRY-RUN   score=16 priority=high     CHARMM-GUI Jobs | Postdoctoral position in QM/MM and Machine Learning Technique Development and Enzyme Mechanism Research | University of Texas at Arlington, Arlington, TX
+           - role type: postdoc (+3)
+           - methods in title: qm/mm (+3)
+           - methods: molecular dynamics, qm/mm, quantum chemistry, electronic structure, mpi (+5)
+           - domain: computational biophysics, drug discovery (+2)
+           - background fit: python, molecular dynamics, qm/mm (+3)
+DRY-RUN   score=15 priority=high     AcademicTransfer | Postdoctoral Researchers in Geometry, Numerical Analysis, and Scientific Computing | Netherlands
+           - core title: scientific computing (+6)
+           - role type: postdoctoral researcher, postdoc (+6)
+           - background fit: mathematica (+1)
+           - preferred location: netherlands (+2)
+DRY-RUN   score=14 priority=high     CHARMM-GUI Jobs | Postdoc in Computational Protein Design/Engineering | Oxford, Mississippi
+           - role type: postdoc (+3)
+           - methods: md simulation, enhanced sampling, metadynamics, umbrella sampling, replica exchange (+5)
+           - domain: computational chemistry (+1)
+           - background fit: gromacs, python, amber (+3)
+           - preferred location: oxford (+2)
+DRY-RUN   score=14 priority=high     European Spallation Source | Scientific Software Developer | Copenhagen, Denmark
+           - core title: scientific software developer (+6)
+           - role type: scientific software developer (+3)
+           - domain: materials science (+1)
+           - background fit: python, c++ (+2)
+           - preferred location: denmark (+2)
+DRY-RUN   score=14 priority=high     Google DeepMind | Research Engineer, Materials Science | Mountain View, California, US
+           - role type: research engineer (+3)
+           - methods: molecular dynamics, quantum chemistry, force field (+3)
+           - domain in title: materials science (+3)
+           - domain: computational chemistry, materials science (+2)
+           - background fit: hpc, molecular dynamics, numpy (+3)
+DRY-RUN   score=14 priority=high     Inria | Engineer - Scientific programmer in privacy-preserving federated machine learning (F/M) | Villeneuve d'Ascq, France
+           - core title: scientific programmer (+6)
+           - role type: scientific programmer (+3)
+           - background fit: python, c++, mathematica (+3)
+           - preferred location: france (+2)
+DRY-RUN   score=14 priority=high     Proxima | Computational Chemist | Zurich ; Remote
+           - core title: computational chemist (+6)
+           - methods: cheminformatics, cadd (+2)
+           - domain: computational chemistry, drug discovery, structural biology (+3)
+           - background fit: python (+1)
+           - remote-compatible location (+2)
+DRY-RUN   score=14 priority=high     Schrodinger | Applications Scientist, Materials Science, Japan | Tokyo
+           - role type: scientist, applications scientist (+6)
+           - methods: molecular dynamics (+1)
+           - domain in title: materials science (+3)
+           - domain: computational chemistry, materials science (+2)
+           - background fit: python, molecular dynamics (+2)
+DRY-RUN   score=14 priority=high     Schrodinger | Force Field Scientist | New York
+           - role type: scientist (+3)
+           - methods in title: force field (+3)
+           - methods: force field parameterization, force field (+2)
+           - domain: computational chemistry, molecular simulation, drug discovery (+3)
+           - background fit: python, c++, force field parameterization (+3)
+
+Run summary
+Fetched:       2489
+Profile match: 81
+New matches:   81
+Posted:        0
+Source errors: 1

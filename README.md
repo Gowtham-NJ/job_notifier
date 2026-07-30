@@ -1,186 +1,203 @@
 # Gowtham Job Notifier
 
-A Slack notifier tailored to computational chemistry, computational biophysics, molecular simulation, electronic-structure, scientific-computing, applications-scientist, and postdoctoral roles.
+A worldwide job and postdoc monitor tailored to computational chemistry, computational biophysics, molecular simulation, electronic structure, scientific computing, research software, atomistic machine learning, applications-scientist, and adjacent roles.
 
-It checks configured career boards, scores each role against `profile.json`, filters to preferred European/remote locations, avoids duplicate alerts with SQLite, and posts matching roles to Slack.
+The notifier fetches public job feeds and career APIs, scores each role against `profile.json`, stores seen jobs in SQLite, and sends new matches through one or more notification services.
 
-## What changed from the original VLSI bot
+## What this version includes
 
-- Replaced VLSI/US filters with a scored computational-science profile.
-- Added high-priority versus standard Slack routing.
-- Added rich Slack messages with match score and reasons.
-- Added safe first-run seeding, so existing jobs are stored without flooding Slack.
-- Replaced fragile repository commits with cached state in GitHub Actions.
-- Replaced the UTF-16, over-pinned dependency file with a normal UTF-8 file.
-- Removed the original repository history and its old job database.
-- Added configuration validation, dry-run mode, sample data, and unit tests.
+- **58 enabled sources** and 6 documented disabled sources.
+- Worldwide acceptance (`location_mode: "all"`) with Europe/UK and genuine remote roles receiving a ranking bonus.
+- Profile terms derived from Gowtham's CV: MD, DFT, QM/MM, electronic structure, charge transport, force-field parameterization, free-energy methods, Python/Fortran/C++, HPC, scientific software, structural bioinformatics, and atomistic ML.
+- High-priority and standard matching; senior/principal positions remain visible but are capped at standard priority.
+- Cross-source duplicate collapsing based on company, title, and location.
+- Safe first-run and per-source seeding, preventing old jobs from flooding notification channels.
+- GitHub Actions execution every three hours in `Europe/Prague`.
+- Slack, Discord, Telegram, ntfy, and Pushover output. Configure any combination.
+- Forty-six fixture and logic tests.
 
-## 1. Test locally
+## Source coverage
+
+### Structured company ATS feeds
+
+The code supports Greenhouse, Lever, Ashby, SmartRecruiters, Workday, Recruitee, and Workable.
+
+Configured target employers include Schrodinger, Isomorphic Labs, Google DeepMind, AQEMIA, Recursion, 1910 Genetics, SES AI, Eikon Therapeutics, Superluminal Medicines, Flagship Pioneering, QuEra, Genesis Molecular AI, Iambic Therapeutics, Relay Therapeutics, Bicycle Therapeutics, Output Biosciences, Proxima, and Topos Bio.
+
+### Specialist scientific and research-software sources
+
+- CCL.NET Jobs
+- CHARMM-GUI Jobs
+- MolSSI Molecular Sciences Jobs
+- CECAM Careers
+- Thomas Young Centre
+- Helmholtz AI Careers
+- US-RSE Jobs
+- Society of Research Software Engineering
+- ISCB Career Center
+- jobRxiv chemistry and bioinformatics listings
+- MathJobs relevant computational listings
+- AcademicKeys Science and Engineering RSS feeds
+
+### Broad academic and institutional sources
+
+- EURAXESS
+- AcademicTransfer
+- AcademicJobsOnline
+- jobs.ac.uk
+- Jobbnorge
+- ResearchJobs.cz
+- Arbeitnow Europe
+- Max Planck Society
+- Leibniz Association
+- Inria
+- EMBL and EMBL partner opportunities
+- CERN
+
+### University RSS feeds
+
+Lund, KTH, Uppsala, Stockholm, Umeå, Jönköping, Karolinska Institutet, Oulu, Eastern Finland, Radboud, Karlstad, and Eindhoven University of Technology.
+
+### Public remote feeds
+
+- Jobicy
+- Himalayas
+
+Remotive is implemented but disabled because its public API recommends a lower polling frequency than the main three-hour workflow. It can be enabled in a separate six-hour workflow.
+
+## Disabled sources
+
+- ScholarshipDB and FindAPostDoc: repeated HTTP 403 responses from the server environment.
+- Nature Careers: automated access to relevant job paths is disallowed by its robots policy.
+- EuroScienceJobs and EuroJobs: published terms restrict automated extraction.
+- Remotive: permitted, but disabled in the three-hour workflow to respect its recommended polling frequency.
+
+The notifier does not scrape LinkedIn, Indeed, Glassdoor, or ResearchGate. These sources are fragile, login-gated, or contractually risky for unattended scraping.
+
+## Local setup
 
 ```bash
-python3 -m venv .venv
+python3.12 -m venv .venv
 source .venv/bin/activate
+python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
-python main.py --validate
-python main.py --dry-run --sample sample_jobs.json
-python -m unittest discover -s tests -v
-```
-
-The dry run should retain the relevant Vienna, Mannheim, and unknown-location postdoc examples, while rejecting sales, leadership, and Canada-only examples.
-
-## 2. Create the Slack webhook
-
-Create a Slack app, enable incoming webhooks, and create a webhook for the channel that should receive jobs.
-
-For local use:
-
-```bash
 cp .env.example .env
 ```
 
-Then place the webhook URL in `.env`:
+Configure at least one notification channel in `.env`, then validate:
+
+```bash
+python main.py --validate
+python -m unittest discover -s tests -v
+python main.py --dry-run --sample sample_jobs.json
+python main.py --dry-run
+```
+
+## Notification channels
+
+Any combination may be enabled. A job is considered delivered when at least one configured channel succeeds.
+
+### Slack
 
 ```dotenv
 SLACK_WEBHOOK_ALL=https://hooks.slack.com/services/...
-SLACK_WEBHOOK_HIGH=https://hooks.slack.com/services/...
+SLACK_WEBHOOK_HIGH=
 ```
 
-`SLACK_WEBHOOK_HIGH` is optional. When absent, all matches go to `SLACK_WEBHOOK_ALL`.
+### Discord
 
-Never commit `.env` or a webhook URL.
+Create incoming webhooks for the desired Discord channels:
 
-## 3. Put it on GitHub
-
-Create a new private GitHub repository and upload this directory. Do not reuse the included archive's old `.git` directory.
-
-In the repository:
-
-1. Open **Settings → Secrets and variables → Actions**.
-2. Add repository secret `SLACK_WEBHOOK_ALL`.
-3. Optionally add `SLACK_WEBHOOK_HIGH` for the strongest matches.
-4. Open **Actions**, select **Gowtham Job Notifier**, and run it manually once.
-
-The first real run uses `initial_run_mode: "seed"`: it records all currently open matching jobs but does not post them. New jobs found on later runs are posted.
-
-To deliberately post existing matches on a local first run:
-
-```bash
-python main.py --post-existing
+```dotenv
+DISCORD_WEBHOOK_ALL=https://discord.com/api/webhooks/...
+DISCORD_WEBHOOK_HIGH=
 ```
 
-## 4. Adjust your profile
+### Telegram
 
-Edit `profile.json`.
+Create a bot with `@BotFather`, send it one message, obtain the chat ID, and configure:
 
-Most useful sections:
-
-- `title_core_terms`: highly specific target titles.
-- `title_role_terms`: acceptable generic role types.
-- `method_terms`: MD, QM/MM, DFT, molecular docking, atomistic ML, and similar methods.
-- `domain_terms`: computational biophysics, materials science, drug discovery, charge transfer, and related domains.
-- `background_terms`: GROMACS, CP2K, Gaussian, Python, Linux, HPC, and similar skills.
-- `preferred_location_terms`: countries and cities that pass the location filter.
-- `hard_negative_title_terms`: sales, internships, leadership, wet-lab-only roles, and other unwanted titles.
-- `minimum_score` and `high_priority_score`: alert sensitivity.
-
-After changes, run:
-
-```bash
-python main.py --validate
-python main.py --dry-run --sample sample_jobs.json
+```dotenv
+TELEGRAM_BOT_TOKEN=123456:ABC...
+TELEGRAM_CHAT_ID=123456789
 ```
 
-## 5. Add or remove companies
+### ntfy
 
-Edit `companies.json`. Supported source types are:
+Subscribe to a long, private topic name in the ntfy phone or web app:
 
-### Greenhouse
+```dotenv
+NTFY_TOPIC_URL=https://ntfy.sh/your-long-private-topic
+NTFY_TOKEN=
+```
+
+### Pushover
+
+```dotenv
+PUSHOVER_APP_TOKEN=
+PUSHOVER_USER_KEY=
+```
+
+## GitHub Actions secrets
+
+Under **Repository → Settings → Secrets and variables → Actions**, add only the services you use:
+
+- `SLACK_WEBHOOK_ALL`, `SLACK_WEBHOOK_HIGH`
+- `DISCORD_WEBHOOK_ALL`, `DISCORD_WEBHOOK_HIGH`
+- `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
+- `NTFY_TOPIC_URL`, `NTFY_TOKEN`
+- `PUSHOVER_APP_TOKEN`, `PUSHOVER_USER_KEY`
+
+The workflow runs at minute 17 every three hours in the Prague timezone. It restores `jobs.db` and `bot_state.json` from the Actions cache.
+
+## Safe upgrade behavior
+
+On the first real run, current matches are stored without being posted. When sources are added later, only those new sources are seeded. Later runs notify only genuinely new matches.
+
+## Adding sources
+
+Edit `companies.json`. Supported source types include:
+
+```text
+greenhouse, lever, ashby, smartrecruiters, workday,
+recruitee, workable, rss, euraxess, academictransfer,
+academicjobsonline, jobs_ac_uk, jobbnorge, arbeitnow,
+researchjobs_cz, ccl, charmm_gui, molssi, cecam, iscb,
+society_rse, max_planck, leibniz, inria, tyc,
+helmholtz_ai, embl_partners, mathjobs, jobrxiv,
+jobicy, himalayas, remotive
+```
+
+Example Ashby source:
 
 ```json
 {
   "company": "Example Company",
-  "source_type": "greenhouse",
-  "token": "examplecompany",
+  "source_type": "ashby",
+  "token": "example-company",
   "enabled": true
 }
 ```
 
-For a URL such as `https://job-boards.greenhouse.io/examplecompany`, the token is `examplecompany`.
-
-### Lever
+Example RSS source:
 
 ```json
 {
-  "company": "Example Company",
-  "source_type": "lever",
-  "token": "examplecompany",
-  "enabled": true
-}
-```
-
-For a URL such as `https://jobs.lever.co/examplecompany`, the token is `examplecompany`.
-
-### SmartRecruiters
-
-```json
-{
-  "company": "Example Company",
-  "source_type": "smartrecruiters",
-  "token": "CompanySlug",
-  "enabled": true
-}
-```
-
-### Workday
-
-```json
-{
-  "company": "Example Company",
-  "source_type": "workday",
-  "token": "https://company.wd3.myworkdayjobs.com/Careers",
-  "enabled": true
-}
-```
-
-Workday sites change frequently. A source failure is logged and does not stop other companies.
-
-### RSS or Atom
-
-```json
-{
-  "company": "Academic jobs feed",
+  "company": "Example University",
   "source_type": "rss",
-  "url": "https://example.org/jobs.rss",
+  "url": "https://example.edu/jobs.rss",
   "enabled": true
 }
 ```
 
-This is useful for universities or academic job portals that expose a genuine RSS/Atom feed.
+## Optional keyed APIs not enabled by default
 
-## Scheduling
+The source audit also identified USAJOBS, Adzuna, Jooble, Careerjet, Reed, and The Muse. They require account registration, API keys, country-specific setup, attribution, or introduce substantial duplication. They are documented in `PORTAL_AUDIT.md` and should be added only after the no-key sources have been observed for a few weeks.
 
-The included GitHub workflow runs at 07:17, 11:17, 15:17, 19:17, and 23:17 in the `Europe/Prague` timezone. Edit `.github/workflows/job-notifier.yml` to change it.
+## Runtime files
 
-## State and duplicate prevention
+- `jobs.db`: previously seen jobs
+- `bot_state.json`: initialization and source-seeding state
+- `run_log.txt`: fetch/post/error log
 
-`jobs.db` stores job URLs already seen, and `bot_state.json` records whether the initial seed has happened. GitHub Actions restores and saves both through its cache. If the cache is eventually evicted, the next run safely seeds current jobs again instead of posting all of them.
-
-## Useful commands
-
-```bash
-# Validate JSON and supported source types
-python main.py --validate
-
-# Test filtering without network or Slack
-python main.py --dry-run --sample sample_jobs.json
-
-# Fetch live sources and print only new matches, without posting or changing state
-python main.py --dry-run
-
-# Limit one run to five posts
-python main.py --max-posts 5
-```
-
-## Current limitation
-
-This version handles company boards well, but academic portals without RSS/API access need a portal-specific source adapter. Do not use broad HTML scraping unless the site's terms permit it and the parser is tested against that site.
+These files and `.env` should remain outside Git tracking.
