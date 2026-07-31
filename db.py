@@ -48,6 +48,12 @@ def init_db() -> None:
             )
             """
         )
+        existing_columns = {
+            row["name"] for row in connection.execute("PRAGMA table_info(bot_users)").fetchall()
+        }
+        for column in ("science_fields", "skills"):
+            if column not in existing_columns:
+                connection.execute(f"ALTER TABLE bot_users ADD COLUMN {column} TEXT")
         connection.commit()
     finally:
         connection.close()
@@ -112,6 +118,7 @@ def start_user_onboarding(telegram_user_id: int, chat_id: int) -> None:
                 chat_id = excluded.chat_id,
                 onboarding_state = CASE
                     WHEN bot_users.name IS NULL THEN 'awaiting_name'
+                    WHEN bot_users.science_fields IS NULL THEN 'awaiting_fields'
                     ELSE bot_users.onboarding_state
                 END,
                 updated_at = CURRENT_TIMESTAMP
@@ -129,14 +136,80 @@ def save_user_name(telegram_user_id: int, chat_id: int, name: str) -> None:
         connection.execute(
             """
             INSERT INTO bot_users (telegram_user_id, chat_id, name, onboarding_state)
-            VALUES (?, ?, ?, 'complete')
+            VALUES (?, ?, ?, 'awaiting_fields')
             ON CONFLICT(telegram_user_id) DO UPDATE SET
                 chat_id = excluded.chat_id,
                 name = excluded.name,
-                onboarding_state = 'complete',
+                onboarding_state = 'awaiting_fields',
                 updated_at = CURRENT_TIMESTAMP
             """,
             (telegram_user_id, chat_id, name),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+
+def save_user_fields(telegram_user_id: int, fields: str) -> None:
+    connection = connect()
+    try:
+        connection.execute(
+            """
+            UPDATE bot_users
+            SET science_fields = ?, onboarding_state = 'awaiting_skills',
+                updated_at = CURRENT_TIMESTAMP
+            WHERE telegram_user_id = ?
+            """,
+            (fields, telegram_user_id),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+
+def save_user_skills(telegram_user_id: int, skills: str) -> None:
+    connection = connect()
+    try:
+        connection.execute(
+            """
+            UPDATE bot_users
+            SET skills = ?, onboarding_state = 'awaiting_confirmation',
+                updated_at = CURRENT_TIMESTAMP
+            WHERE telegram_user_id = ?
+            """,
+            (skills, telegram_user_id),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+
+def confirm_user_profile(telegram_user_id: int) -> None:
+    connection = connect()
+    try:
+        connection.execute(
+            """
+            UPDATE bot_users SET onboarding_state = 'complete', updated_at = CURRENT_TIMESTAMP
+            WHERE telegram_user_id = ?
+            """,
+            (telegram_user_id,),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+
+def restart_science_profile(telegram_user_id: int) -> None:
+    connection = connect()
+    try:
+        connection.execute(
+            """
+            UPDATE bot_users
+            SET science_fields = NULL, skills = NULL, onboarding_state = 'awaiting_fields',
+                updated_at = CURRENT_TIMESTAMP
+            WHERE telegram_user_id = ?
+            """,
+            (telegram_user_id,),
         )
         connection.commit()
     finally:

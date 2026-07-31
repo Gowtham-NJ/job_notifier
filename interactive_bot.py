@@ -9,10 +9,42 @@ from typing import Any
 import requests
 from dotenv import load_dotenv
 
-from db import get_bot_user, init_db, save_user_name, start_user_onboarding
+from db import (
+    confirm_user_profile,
+    get_bot_user,
+    init_db,
+    restart_science_profile,
+    save_user_fields,
+    save_user_name,
+    save_user_skills,
+    start_user_onboarding,
+)
 from notifiers import TELEGRAM_API_ROOT, validate_telegram_config
 
 load_dotenv(Path(__file__).resolve().parent / ".env")
+
+SCIENCE_TERMS = {
+    "science", "biology", "biochemistry", "biophysics", "bioinformatics",
+    "biotechnology", "chemistry", "immunology", "microbiology", "molecular",
+    "neuroscience", "genetics", "genomics", "proteomics", "pharmacology",
+    "toxicology", "medicine", "medical", "clinical", "physics", "materials",
+    "environmental", "ecology", "earth", "geology", "astronomy", "mathematics",
+    "computational", "structural", "cell", "biomedical", "epidemiology",
+}
+
+
+def _looks_scientific(value: str) -> bool:
+    normalized = value.casefold()
+    return any(term in normalized for term in SCIENCE_TERMS)
+
+
+def _profile_summary(user: dict[str, Any]) -> str:
+    return (
+        "Please confirm your science profile:\n\n"
+        f"🔬 Fields: {user['science_fields']}\n"
+        f"🧰 Skills: {user['skills']}\n\n"
+        "Reply yes to save it, or no to enter it again."
+    )
 
 
 def reply_for_update(update: dict[str, Any]) -> tuple[int, str] | None:
@@ -27,16 +59,56 @@ def reply_for_update(update: dict[str, Any]) -> tuple[int, str] | None:
     if text.split()[0].casefold() == "/start":
         start_user_onboarding(user_id, chat_id)
         if user and user.get("name"):
-            return chat_id, f"Welcome back, {user['name']}! 👋"
+            if user.get("science_fields") and user.get("skills"):
+                return chat_id, f"Welcome back, {user['name']}! 👋 Your science profile is ready."
+            return chat_id, (
+                f"Welcome back, {user['name']}! 👋\n"
+                "Which scientific fields are you interested in? For example: immunology, "
+                "molecular biology, or bioinformatics."
+            )
         return chat_id, "Hello! 👋 What should I call you?"
 
     if user and user.get("onboarding_state") == "awaiting_name":
         name = " ".join(text.split())[:80]
         save_user_name(user_id, chat_id, name)
-        return chat_id, f"Nice to meet you, {name}! 🎉"
+        return chat_id, (
+            f"Nice to meet you, {name}! 🎉\n"
+            "Which scientific fields are you interested in? For example: immunology, "
+            "molecular biology, or bioinformatics."
+        )
+
+    if user and user.get("onboarding_state") == "awaiting_fields":
+        fields = " ".join(text.split())[:500]
+        if not _looks_scientific(fields):
+            return chat_id, (
+                "This bot is only for science-related jobs. Please enter one or more scientific "
+                "fields, such as immunology, chemistry, neuroscience, or bioinformatics."
+            )
+        save_user_fields(user_id, fields)
+        return chat_id, (
+            "Great! Now share your scientific skills or techniques. For example: flow cytometry, "
+            "Python, RNA sequencing, cell culture, or molecular dynamics."
+        )
+
+    if user and user.get("onboarding_state") == "awaiting_skills":
+        skills = " ".join(text.split())[:1000]
+        if len(skills) < 2:
+            return chat_id, "Please enter at least one skill or scientific technique."
+        save_user_skills(user_id, skills)
+        return chat_id, _profile_summary(get_bot_user(user_id) or {})
+
+    if user and user.get("onboarding_state") == "awaiting_confirmation":
+        answer = text.casefold().strip(".! ")
+        if answer in {"yes", "y"}:
+            confirm_user_profile(user_id)
+            return chat_id, "Your science profile is saved! ✅"
+        if answer in {"no", "n"}:
+            restart_science_profile(user_id)
+            return chat_id, "No problem. Which scientific fields are you interested in?"
+        return chat_id, "Please reply yes to save the profile or no to enter it again."
 
     if user and user.get("name"):
-        return chat_id, "Phase 1 is ready. For now, send /start to see your greeting."
+        return chat_id, "Your science profile is saved. Send /start to see your greeting."
     return chat_id, "Please send /start so I can introduce myself."
 
 

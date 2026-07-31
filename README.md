@@ -100,13 +100,14 @@ python main.py --dry-run
 
 Telegram is required and attempted first. Optional channels may remain configured as fallbacks; a job is considered delivered when at least one configured channel succeeds.
 
-## Interactive bot — Phase 1
+## Interactive bot — Phase 2
 
-The first interactive milestone supports a deliberately small onboarding flow:
+The interactive onboarding currently supports:
 
 1. A user sends `/start`.
 2. The bot asks their name.
-3. The bot saves their Telegram user ID and name in `jobs.db` and greets them.
+3. The bot asks for science fields and skills.
+4. The user confirms the summary before it is saved in `jobs.db`.
 
 Run it locally for testing:
 
@@ -114,7 +115,7 @@ Run it locally for testing:
 .venv/bin/python interactive_bot.py
 ```
 
-Keep that process running, open the bot in Telegram, and send `/start`. Stop it with `Ctrl+C`. This phase does not collect skills, match jobs, or schedule reminders yet.
+Keep that process running, open the bot in Telegram, and send `/start`. Stop it with `Ctrl+C`. The bot remains restricted to scientific profiles. This phase does not match jobs or schedule reminders yet.
 
 ### Telegram (primary)
 
