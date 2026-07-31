@@ -36,6 +36,18 @@ def init_db() -> None:
         connection.execute(
             "CREATE INDEX IF NOT EXISTS idx_jobs_first_seen ON jobs(first_seen)"
         )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS bot_users (
+                telegram_user_id INTEGER PRIMARY KEY,
+                chat_id INTEGER NOT NULL,
+                name TEXT,
+                onboarding_state TEXT NOT NULL DEFAULT 'awaiting_name',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
         connection.commit()
     finally:
         connection.close()
@@ -85,5 +97,58 @@ def save_job(job: dict[str, Any], dedup_key: str, score: int, priority: str) -> 
             ),
         )
         connection.commit()
+    finally:
+        connection.close()
+
+
+def start_user_onboarding(telegram_user_id: int, chat_id: int) -> None:
+    connection = connect()
+    try:
+        connection.execute(
+            """
+            INSERT INTO bot_users (telegram_user_id, chat_id, onboarding_state)
+            VALUES (?, ?, 'awaiting_name')
+            ON CONFLICT(telegram_user_id) DO UPDATE SET
+                chat_id = excluded.chat_id,
+                onboarding_state = CASE
+                    WHEN bot_users.name IS NULL THEN 'awaiting_name'
+                    ELSE bot_users.onboarding_state
+                END,
+                updated_at = CURRENT_TIMESTAMP
+            """,
+            (telegram_user_id, chat_id),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+
+def save_user_name(telegram_user_id: int, chat_id: int, name: str) -> None:
+    connection = connect()
+    try:
+        connection.execute(
+            """
+            INSERT INTO bot_users (telegram_user_id, chat_id, name, onboarding_state)
+            VALUES (?, ?, ?, 'complete')
+            ON CONFLICT(telegram_user_id) DO UPDATE SET
+                chat_id = excluded.chat_id,
+                name = excluded.name,
+                onboarding_state = 'complete',
+                updated_at = CURRENT_TIMESTAMP
+            """,
+            (telegram_user_id, chat_id, name),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+
+def get_bot_user(telegram_user_id: int) -> dict[str, Any] | None:
+    connection = connect()
+    try:
+        row = connection.execute(
+            "SELECT * FROM bot_users WHERE telegram_user_id = ?", (telegram_user_id,)
+        ).fetchone()
+        return dict(row) if row else None
     finally:
         connection.close()
