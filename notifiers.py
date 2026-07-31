@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import html
 import os
+import re
 import time
 from pathlib import Path
 from typing import Any, Callable
@@ -13,6 +14,27 @@ from dotenv import load_dotenv
 load_dotenv(Path(__file__).resolve().parent / ".env")
 
 TRANSIENT_STATUS = {429, 500, 502, 503, 504}
+TELEGRAM_API_ROOT = "https://api.telegram.org"
+TELEGRAM_MESSAGE_LIMIT = 4096
+
+
+def _safe_error(error: object) -> str:
+    """Remove configured credentials from errors before they reach logs."""
+    message = str(error)
+    for name in (
+        "TELEGRAM_BOT_TOKEN",
+        "SLACK_WEBHOOK_ALL",
+        "SLACK_WEBHOOK_HIGH",
+        "DISCORD_WEBHOOK_ALL",
+        "DISCORD_WEBHOOK_HIGH",
+        "NTFY_TOKEN",
+        "PUSHOVER_APP_TOKEN",
+        "PUSHOVER_USER_KEY",
+    ):
+        secret = os.getenv(name, "").strip()
+        if secret:
+            message = message.replace(secret, "[REDACTED]")
+    return message
 
 
 def _post_json(url: str, payload: dict[str, Any], headers: dict[str, str] | None = None, retries: int = 3) -> None:
@@ -30,7 +52,7 @@ def _post_json(url: str, payload: dict[str, Any], headers: dict[str, str] | None
             last_error = exc
         if attempt < retries:
             time.sleep(2 * attempt)
-    raise RuntimeError(f"notification failed after {retries} attempts: {last_error}")
+    raise RuntimeError(f"notification failed after {retries} attempts: {_safe_error(last_error)}")
 
 
 def _post_form(url: str, payload: dict[str, Any], retries: int = 3) -> None:
@@ -48,11 +70,50 @@ def _post_form(url: str, payload: dict[str, Any], retries: int = 3) -> None:
             last_error = exc
         if attempt < retries:
             time.sleep(2 * attempt)
-    raise RuntimeError(f"notification failed after {retries} attempts: {last_error}")
+    raise RuntimeError(f"notification failed after {retries} attempts: {_safe_error(last_error)}")
 
 
 def _value(name: str) -> str:
     return os.getenv(name, "").strip()
+
+
+def validate_telegram_config() -> tuple[str, str]:
+    """Return validated Telegram credentials without making a network request."""
+    token = _value("TELEGRAM_BOT_TOKEN")
+    chat_id = _value("TELEGRAM_CHAT_ID")
+    missing = [name for name, value in (("TELEGRAM_BOT_TOKEN", token), ("TELEGRAM_CHAT_ID", chat_id)) if not value]
+    if missing:
+        raise ValueError(f"Missing required Telegram configuration: {', '.join(missing)}")
+    if not re.fullmatch(r"\d+:[A-Za-z0-9_-]+", token):
+        raise ValueError("TELEGRAM_BOT_TOKEN does not look like a BotFather token")
+    if not re.fullmatch(r"-?\d+", chat_id):
+        raise ValueError("TELEGRAM_CHAT_ID must be a numeric user, group, or channel ID")
+    return token, chat_id
+
+
+def validate_telegram_connection() -> str:
+    """Verify the bot token and destination chat without sending a message."""
+    token, chat_id = validate_telegram_config()
+    try:
+        bot_response = requests.get(f"{TELEGRAM_API_ROOT}/bot{token}/getMe", timeout=20)
+        bot_response.raise_for_status()
+    except requests.RequestException as exc:
+        raise RuntimeError(f"Could not validate Telegram bot: {_safe_error(exc)}") from None
+    bot_data = bot_response.json()
+    if not bot_data.get("ok"):
+        raise RuntimeError(f"Telegram rejected the bot token: {bot_data.get('description', 'unknown error')}")
+    try:
+        chat_response = requests.get(
+            f"{TELEGRAM_API_ROOT}/bot{token}/getChat", params={"chat_id": chat_id}, timeout=20
+        )
+        chat_response.raise_for_status()
+    except requests.RequestException as exc:
+        raise RuntimeError(f"Could not access the Telegram chat: {_safe_error(exc)}") from None
+    chat_data = chat_response.json()
+    if not chat_data.get("ok"):
+        raise RuntimeError(f"Telegram rejected the chat ID: {chat_data.get('description', 'unknown error')}")
+    username = bot_data.get("result", {}).get("username") or "configured bot"
+    return f"Telegram configuration valid for @{username} and chat {chat_id}."
 
 
 def _priority_url(prefix: str, priority: str) -> str:
@@ -168,17 +229,17 @@ def _send_discord(job: dict[str, Any], match: Any) -> bool:
 
 
 def _send_telegram(job: dict[str, Any], match: Any) -> bool:
-    token = _value("TELEGRAM_BOT_TOKEN")
-    chat_id = _value("TELEGRAM_CHAT_ID")
-    if not token or not chat_id:
-        return False
+    token, chat_id = validate_telegram_config()
+    text = _telegram_text(job, match)
+    if len(text) > TELEGRAM_MESSAGE_LIMIT:
+        text = text[: TELEGRAM_MESSAGE_LIMIT - 1] + "…"
     _post_json(
-        f"https://api.telegram.org/bot{token}/sendMessage",
+        f"{TELEGRAM_API_ROOT}/bot{token}/sendMessage",
         {
             "chat_id": chat_id,
-            "text": _telegram_text(job, match),
+            "text": text,
             "parse_mode": "HTML",
-            "disable_web_page_preview": False,
+            "link_preview_options": {"is_disabled": False},
         },
     )
     return True
@@ -247,11 +308,13 @@ def _deliver(senders: list[tuple[str, Callable[[], bool]]]) -> None:
 
 
 def post_job(job: dict[str, Any], match: Any) -> None:
+    # Telegram is the primary channel. Optional channels are retained as fallbacks.
+    validate_telegram_config()
     _deliver(
         [
+            ("Telegram", lambda: _send_telegram(job, match)),
             ("Slack", lambda: _send_slack(job, match)),
             ("Discord", lambda: _send_discord(job, match)),
-            ("Telegram", lambda: _send_telegram(job, match)),
             ("ntfy", lambda: _send_ntfy(job, match)),
             ("Pushover", lambda: _send_pushover(job, match)),
         ]
@@ -267,14 +330,14 @@ def post_status(message: str) -> None:
     discord = _value("DISCORD_WEBHOOK_ALL")
     if discord:
         senders.append(("Discord", lambda: (_post_json(discord, {"content": message}) or True)))
-    token, chat_id = _value("TELEGRAM_BOT_TOKEN"), _value("TELEGRAM_CHAT_ID")
+    token, chat_id = validate_telegram_config()
     if token and chat_id:
         senders.append(
             (
                 "Telegram",
                 lambda: (
                     _post_json(
-                        f"https://api.telegram.org/bot{token}/sendMessage",
+                        f"{TELEGRAM_API_ROOT}/bot{token}/sendMessage",
                         {"chat_id": chat_id, "text": message},
                     )
                     or True

@@ -13,7 +13,7 @@ The notifier fetches public job feeds and career APIs, scores each role against 
 - Cross-source duplicate collapsing based on company, title, and location.
 - Safe first-run and per-source seeding, preventing old jobs from flooding notification channels.
 - GitHub Actions execution every three hours in `Europe/Prague`.
-- Slack, Discord, Telegram, ntfy, and Pushover output. Configure any combination.
+- Telegram delivery by default, with optional Slack, Discord, ntfy, and Pushover fallbacks.
 - Forty-six fixture and logic tests.
 
 ## Source coverage
@@ -84,10 +84,13 @@ python -m pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Configure at least one notification channel in `.env`, then validate:
+Create a Telegram bot with `@BotFather`, send the bot `/start`, then copy `.env.example` to `.env` and set `TELEGRAM_BOT_TOKEN` and the numeric `TELEGRAM_CHAT_ID`. Keep this file local; it is ignored by Git.
+
+Validate the files and the Telegram destination without sending a message:
 
 ```bash
 python main.py --validate
+python main.py --check-telegram
 python -m unittest discover -s tests -v
 python main.py --dry-run --sample sample_jobs.json
 python main.py --dry-run
@@ -95,31 +98,31 @@ python main.py --dry-run
 
 ## Notification channels
 
-Any combination may be enabled. A job is considered delivered when at least one configured channel succeeds.
+Telegram is required and attempted first. Optional channels may remain configured as fallbacks; a job is considered delivered when at least one configured channel succeeds.
 
-### Slack
+### Telegram (primary)
+
+```dotenv
+TELEGRAM_BOT_TOKEN=123456:ABC...
+TELEGRAM_CHAT_ID=123456789
+```
+
+For a private chat, open the bot in Telegram and send `/start`. To discover the numeric ID, visit `https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates` locally and read `message.chat.id`. Group IDs are usually negative; add the bot to the group and send a message first. `python main.py --check-telegram` then verifies the bot and chat without posting anything.
+
+### Slack (optional legacy fallback)
 
 ```dotenv
 SLACK_WEBHOOK_ALL=https://hooks.slack.com/services/...
 SLACK_WEBHOOK_HIGH=
 ```
 
-### Discord
+### Discord (optional fallback)
 
 Create incoming webhooks for the desired Discord channels:
 
 ```dotenv
 DISCORD_WEBHOOK_ALL=https://discord.com/api/webhooks/...
 DISCORD_WEBHOOK_HIGH=
-```
-
-### Telegram
-
-Create a bot with `@BotFather`, send it one message, obtain the chat ID, and configure:
-
-```dotenv
-TELEGRAM_BOT_TOKEN=123456:ABC...
-TELEGRAM_CHAT_ID=123456789
 ```
 
 ### ntfy
@@ -140,13 +143,11 @@ PUSHOVER_USER_KEY=
 
 ## GitHub Actions secrets
 
-Under **Repository → Settings → Secrets and variables → Actions**, add only the services you use:
+Under **Repository → Settings → Secrets and variables → Actions**, add these two required secrets:
 
-- `SLACK_WEBHOOK_ALL`, `SLACK_WEBHOOK_HIGH`
-- `DISCORD_WEBHOOK_ALL`, `DISCORD_WEBHOOK_HIGH`
 - `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
-- `NTFY_TOPIC_URL`, `NTFY_TOKEN`
-- `PUSHOVER_APP_TOKEN`, `PUSHOVER_USER_KEY`
+
+The local `.env` is not uploaded to GitHub, so these repository secrets must be added separately. The workflow validates both secrets and confirms access to the destination chat before collecting jobs. Optional fallback environment variables supported by the Python code are documented in `.env.example`, but the default workflow intentionally injects only Telegram.
 
 The workflow runs at minute 17 every three hours in the Prague timezone. It restores `jobs.db` and `bot_state.json` from the Actions cache.
 

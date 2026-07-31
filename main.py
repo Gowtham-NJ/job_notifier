@@ -12,7 +12,7 @@ from typing import Any
 from config import ConfigError, load_json, validate_companies, validate_profile
 from db import init_db, job_exists, make_dedup_key, save_job
 from filters import MatchResult, clean_text, evaluate_job
-from notifiers import post_job, post_status
+from notifiers import post_job, post_status, validate_telegram_config, validate_telegram_connection
 from sources import fetch_jobs
 
 STATE_PATH = Path("bot_state.json")
@@ -44,7 +44,7 @@ def save_state(state: dict[str, Any]) -> None:
 
 
 def source_key(source: dict[str, Any]) -> str:
-    """Stable identifier used to seed newly added sources without Slack flooding."""
+    """Stable identifier used to seed newly added sources without notification flooding."""
     source_type = str(source.get("source_type", "")).strip()
     company = str(source.get("company", "")).strip()
     identity = source.get("token") or source.get("url") or company
@@ -104,11 +104,16 @@ def run(args: argparse.Namespace) -> int:
 
     enabled_sources = [source for source in companies if source.get("enabled", True) is not False]
     if args.validate:
+        validate_telegram_config()
         disabled = len(companies) - len(enabled_sources)
         print(
             f"Configuration valid: {len(enabled_sources)} enabled sources, {disabled} disabled, "
             f"profile '{profile.get('profile_name', 'unnamed')}'"
         )
+        return 0
+
+    if getattr(args, "check_telegram", False):
+        print(validate_telegram_connection())
         return 0
 
     init_db()
@@ -204,7 +209,7 @@ def run(args: argparse.Namespace) -> int:
         return 0
 
     # Each newly added source is seeded once. This prevents an established notifier from
-    # treating every pre-existing vacancy on a newly configured board as a new Slack alert.
+    # treating every pre-existing vacancy on a newly configured board as a new alert.
     unseeded_source_keys: set[str] = set()
     newly_seeded_jobs = 0
     if not args.dry_run and not args.sample:
@@ -285,15 +290,20 @@ def run(args: argparse.Namespace) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Slack job notifier tailored to a configurable research profile"
+        description="Telegram job notifier tailored to a configurable research profile"
     )
     parser.add_argument("--profile", default="profile.json", help="Path to profile JSON")
     parser.add_argument("--companies", default="companies.json", help="Path to source list JSON")
     parser.add_argument(
-        "--dry-run", action="store_true", help="Print matching jobs without Slack posts or DB changes"
+        "--dry-run", action="store_true", help="Print matching jobs without Telegram posts or DB changes"
     )
     parser.add_argument("--sample", help="Read jobs from a local JSON file instead of fetching career sites")
     parser.add_argument("--validate", action="store_true", help="Validate configuration and exit")
+    parser.add_argument(
+        "--check-telegram",
+        action="store_true",
+        help="Verify the Telegram bot and chat configuration without sending a message",
+    )
     parser.add_argument(
         "--post-existing",
         action="store_true",
