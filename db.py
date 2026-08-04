@@ -176,6 +176,21 @@ def save_catalog_jobs(jobs: list[dict[str, Any]]) -> int:
         connection.close()
 
 
+def list_catalog_jobs(limit: int = 5000) -> list[dict[str, Any]]:
+    connection = connect()
+    try:
+        rows = connection.execute(
+            """
+            SELECT company, title, location, url, source, description, first_seen, last_seen
+            FROM job_catalog ORDER BY last_seen DESC, id DESC LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+    finally:
+        connection.close()
+
+
 def start_user_onboarding(telegram_user_id: int, chat_id: int) -> None:
     connection = connect()
     try:

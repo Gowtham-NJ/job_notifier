@@ -22,6 +22,7 @@ from db import (
     delete_bot_user,
     get_bot_user,
     init_db,
+    list_catalog_jobs,
     restart_science_profile,
     restart_job_preferences,
     save_preferred_locations,
@@ -33,6 +34,7 @@ from db import (
     save_cv_profile_draft,
     start_user_onboarding,
 )
+from matching import PersonalizedMatch, find_matching_jobs
 from notifiers import TELEGRAM_API_ROOT, validate_telegram_config
 
 load_dotenv(Path(__file__).resolve().parent / ".env")
@@ -152,6 +154,30 @@ def _stored_profile(user: dict[str, Any]) -> str:
         f"🏠 Work arrangement: {value('work_mode')}\n\n"
         "Use /preferences to change job preferences or /delete_profile to remove your data."
     )
+
+
+def _format_job_matches(user: dict[str, Any], matches: list[PersonalizedMatch]) -> str:
+    if not matches:
+        return (
+            "I could not find a strong match in the current science catalogue. "
+            "Try broadening your preferences with /preferences."
+        )
+    sections = [f"Top job matches for {str(user.get('name') or 'you')[:80]}:"]
+    for index, match in enumerate(matches, start=1):
+        job = match.job
+        title = str(job.get("title") or "Untitled role")[:180]
+        company = str(job.get("company") or "Unknown organization")[:120]
+        location = str(job.get("location") or "Location not supplied")[:140]
+        reasons = "; ".join(match.reasons[:3]) or "science profile match"
+        lines = [
+            f"{index}. {title}",
+            f"{company} · {location}",
+            f"Why: {reasons}",
+        ]
+        if job.get("url"):
+            lines.append(str(job["url"])[:500])
+        sections.append("\n".join(lines))
+    return "\n\n".join(sections)[:4000]
 
 
 def extract_pdf_text(content: bytes) -> str:
@@ -339,6 +365,15 @@ def reply_for_update(update: dict[str, Any]) -> tuple[int, str] | None:
         if not user:
             return chat_id, "No profile is stored for you. Send /start or /cv to create one."
         return chat_id, _stored_profile(user)
+
+    if text.split()[0].casefold() == "/jobs":
+        required = ("science_fields", "skills", "target_roles", "preferred_locations", "work_mode")
+        if not user or any(not user.get(field) for field in required):
+            return chat_id, "Please complete your science profile and /preferences first."
+        jobs = list_catalog_jobs()
+        if not jobs:
+            return chat_id, "The science job catalogue is empty. Please try again after a collector run."
+        return chat_id, _format_job_matches(user, find_matching_jobs(user, jobs, limit=5))
 
     if text.split()[0].casefold() == "/delete_profile":
         if not begin_profile_deletion(user_id):

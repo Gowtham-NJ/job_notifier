@@ -260,6 +260,28 @@ class InteractiveBotTests(unittest.TestCase):
         self.assertIn("permanently deleted", reply_for_update(update("DELETE"))[1])
         self.assertIsNone(db.get_bot_user(101))
 
+    def test_jobs_command_requires_complete_preferences(self):
+        self.assertIn("complete your science profile", reply_for_update(update("/jobs"))[1])
+
+    def test_jobs_command_returns_ranked_catalog_results(self):
+        self._create_complete_profile()
+        db.save_catalog_jobs(
+            [
+                {
+                    "company": "Example Institute",
+                    "title": "Research Scientist in Immunology",
+                    "location": "Europe - Hybrid",
+                    "url": "https://example.org/jobs/immunology",
+                    "source": "example",
+                    "description": "Flow cytometry research.",
+                }
+            ]
+        )
+        response = reply_for_update(update("/jobs"))[1]
+        self.assertIn("Top job matches for Maya", response)
+        self.assertIn("Research Scientist in Immunology", response)
+        self.assertIn("https://example.org/jobs/immunology", response)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -100,7 +100,7 @@ python main.py --dry-run
 
 Telegram is required and attempted first. Optional channels may remain configured as fallbacks; a job is considered delivered when at least one configured channel succeeds.
 
-## Interactive bot — Phase 7
+## Interactive bot — Phase 8
 
 The interactive onboarding currently supports:
 
@@ -116,6 +116,7 @@ The interactive onboarding currently supports:
 10. `/profile` displays all structured data stored for the current Telegram user.
 11. `/delete_profile` permanently deletes that user's profile after exact confirmation.
 12. Real collector runs maintain a separate science-only shared job catalogue for future matching.
+13. `/jobs` ranks and displays up to five catalogue jobs using the user's confirmed profile and preferences.
 
 Run it locally for testing:
 
@@ -123,7 +124,7 @@ Run it locally for testing:
 .venv/bin/python interactive_bot.py
 ```
 
-Keep that process running, open the bot in Telegram, and send `/start`, `/cv`, `/preferences`, or `/profile`. Stop it with `Ctrl+C`. PDF files are limited to 8 MB and 30 pages. Neither the PDF nor its raw text is saved; only a confirmed structured profile is retained. Extraction uses a local scientific vocabulary and no external AI service. `/delete_profile` removes the user's structured profile and preferences without touching shared job listings. Real scheduled runs now upsert broadly filtered scientific vacancies and their descriptions into `job_catalog`; dry-runs and sample runs never write to it. This phase does not match jobs or schedule reminders yet.
+Keep that process running, open the bot in Telegram, and send `/start`, `/cv`, `/preferences`, `/profile`, or `/jobs`. Stop it with `Ctrl+C`. PDF files are limited to 8 MB and 30 pages. Neither the PDF nor its raw text is saved; only a confirmed structured profile is retained. Extraction uses a local scientific vocabulary and no external AI service. `/delete_profile` removes the user's structured profile and preferences without touching shared job listings. Real scheduled runs upsert broadly filtered scientific vacancies and descriptions into `job_catalog`; dry-runs and sample runs never write to it. `/jobs` is read-only and returns at most five explainable matches. This phase does not send automatic personalized alerts or schedule reminders yet.
 
 Refresh the shared catalogue without sending notifications or changing notifier state:
 
