@@ -100,7 +100,7 @@ python main.py --dry-run
 
 Telegram is required and attempted first. Optional channels may remain configured as fallbacks; a job is considered delivered when at least one configured channel succeeds.
 
-## Interactive bot — Phase 6
+## Interactive bot — Phase 7
 
 The interactive onboarding currently supports:
 
@@ -115,6 +115,7 @@ The interactive onboarding currently supports:
 9. The user confirms job preferences before they become active.
 10. `/profile` displays all structured data stored for the current Telegram user.
 11. `/delete_profile` permanently deletes that user's profile after exact confirmation.
+12. Real collector runs maintain a separate science-only shared job catalogue for future matching.
 
 Run it locally for testing:
 
@@ -122,7 +123,13 @@ Run it locally for testing:
 .venv/bin/python interactive_bot.py
 ```
 
-Keep that process running, open the bot in Telegram, and send `/start`, `/cv`, `/preferences`, or `/profile`. Stop it with `Ctrl+C`. PDF files are limited to 8 MB and 30 pages. Neither the PDF nor its raw text is saved; only a confirmed structured profile is retained. Extraction uses a local scientific vocabulary and no external AI service. `/delete_profile` removes the user's structured profile and preferences without touching shared job listings. This phase does not match jobs or schedule reminders yet.
+Keep that process running, open the bot in Telegram, and send `/start`, `/cv`, `/preferences`, or `/profile`. Stop it with `Ctrl+C`. PDF files are limited to 8 MB and 30 pages. Neither the PDF nor its raw text is saved; only a confirmed structured profile is retained. Extraction uses a local scientific vocabulary and no external AI service. `/delete_profile` removes the user's structured profile and preferences without touching shared job listings. Real scheduled runs now upsert broadly filtered scientific vacancies and their descriptions into `job_catalog`; dry-runs and sample runs never write to it. This phase does not match jobs or schedule reminders yet.
+
+Refresh the shared catalogue without sending notifications or changing notifier state:
+
+```bash
+.venv/bin/python main.py --catalog-only
+```
 
 ### Telegram (primary)
 
@@ -226,3 +233,5 @@ The source audit also identified USAJOBS, Adzuna, Jooble, Careerjet, Reed, and T
 - `run_log.txt`: fetch/post/error log
 
 These files and `.env` should remain outside Git tracking.
+
+The `jobs.db` file contains two separate job datasets: `jobs` preserves the original notifier's seen-job and deduplication behavior, while `job_catalog` stores shared scientific vacancies for future per-user matching.

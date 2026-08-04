@@ -38,6 +38,26 @@ def init_db() -> None:
         )
         connection.execute(
             """
+            CREATE TABLE IF NOT EXISTS job_catalog (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                dedup_key TEXT NOT NULL UNIQUE,
+                company TEXT NOT NULL,
+                title TEXT NOT NULL,
+                location TEXT,
+                url TEXT,
+                source TEXT,
+                source_key TEXT,
+                description TEXT,
+                first_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        connection.execute(
+            "CREATE INDEX IF NOT EXISTS idx_job_catalog_last_seen ON job_catalog(last_seen)"
+        )
+        connection.execute(
+            """
             CREATE TABLE IF NOT EXISTS bot_users (
                 telegram_user_id INTEGER PRIMARY KEY,
                 chat_id INTEGER NOT NULL,
@@ -115,6 +135,43 @@ def save_job(job: dict[str, Any], dedup_key: str, score: int, priority: str) -> 
             ),
         )
         connection.commit()
+    finally:
+        connection.close()
+
+
+def save_catalog_jobs(jobs: list[dict[str, Any]]) -> int:
+    """Upsert shared science vacancies without affecting notification state."""
+    connection = connect()
+    try:
+        for job in jobs:
+            connection.execute(
+                """
+                INSERT INTO job_catalog (
+                    dedup_key, company, title, location, url, source, source_key, description
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(dedup_key) DO UPDATE SET
+                    company = excluded.company,
+                    title = excluded.title,
+                    location = excluded.location,
+                    url = excluded.url,
+                    source = excluded.source,
+                    source_key = excluded.source_key,
+                    description = excluded.description,
+                    last_seen = CURRENT_TIMESTAMP
+                """,
+                (
+                    make_dedup_key(job),
+                    str(job.get("company") or "")[:500],
+                    str(job.get("title") or "")[:1000],
+                    str(job.get("location") or "")[:1000],
+                    str(job.get("url") or "")[:4000],
+                    str(job.get("source") or "")[:500],
+                    str(job.get("_source_key") or "")[:4000],
+                    str(job.get("description") or "")[:50_000],
+                ),
+            )
+        connection.commit()
+        return len(jobs)
     finally:
         connection.close()
 

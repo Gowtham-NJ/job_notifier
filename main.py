@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from catalog import catalog_science_jobs
 from config import ConfigError, load_json, validate_companies, validate_profile
 from db import init_db, job_exists, make_dedup_key, save_job
 from filters import MatchResult, clean_text, evaluate_job
@@ -97,6 +98,9 @@ def _seed_jobs(
 
 
 def run(args: argparse.Namespace) -> int:
+    catalog_only = getattr(args, "catalog_only", False)
+    if catalog_only and (args.dry_run or args.sample):
+        raise ConfigError("--catalog-only cannot be combined with --dry-run or --sample")
     profile = load_json(args.profile)
     companies = load_json(args.companies)
     validate_profile(profile)
@@ -144,6 +148,15 @@ def run(args: argparse.Namespace) -> int:
                 source_errors.append(error)
                 print(f"WARNING: {error}", file=sys.stderr)
                 log(f"ERROR | {error}")
+
+    persist_catalog = catalog_only or (not args.dry_run and not args.sample)
+    catalogued = catalog_science_jobs(fetched_jobs, persist=persist_catalog)
+    if persist_catalog:
+        print(f"Science catalogue: stored or refreshed {catalogued} jobs")
+        log(f"CATALOG | count={catalogued}")
+    if catalog_only:
+        print("Catalogue-only run complete; no notifications or notifier state changes were made.")
+        return 0
 
     evaluated: list[tuple[dict[str, Any], MatchResult, str]] = []
     runtime_seen: set[str] = set()
@@ -276,6 +289,7 @@ def run(args: argparse.Namespace) -> int:
     print(f"New matches:   {len(new_matches)}")
     print(f"Posted:        {posted if not args.dry_run else 0}")
     print(f"Source errors: {len(source_errors)}")
+    print(f"Science jobs:  {catalogued}")
     if newly_seeded_jobs:
         print(f"Seeded:        {newly_seeded_jobs}")
 
@@ -310,6 +324,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Post matching jobs on the first real run instead of seeding them",
     )
     parser.add_argument("--max-posts", type=int, help="Override max_posts_per_run")
+    parser.add_argument(
+        "--catalog-only",
+        action="store_true",
+        help="Refresh the shared science catalogue without matching, posting, or state changes",
+    )
     return parser
 
 

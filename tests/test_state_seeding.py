@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import main
+import db
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -70,6 +71,13 @@ class StateSeedingTests(unittest.TestCase):
             self.assertEqual(state["state_schema"], 2)
             self.assertEqual(len(state["seeded_sources"]), 1)
             self.assertTrue(db_path.exists())
+            with patch("db.DB_PATH", db_path):
+                database = db.connect()
+                try:
+                    catalog_count = database.execute("SELECT COUNT(*) FROM job_catalog").fetchone()[0]
+                finally:
+                    database.close()
+            self.assertEqual(catalog_count, 1)
 
 
 if __name__ == "__main__":
