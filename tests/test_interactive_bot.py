@@ -4,7 +4,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import db
-from interactive_bot import reply_for_update
+from interactive_bot import process_update, reply_for_update
 
 
 def update(text: str, user_id: int = 101, chat_id: int = 202) -> dict:
@@ -89,6 +89,61 @@ class InteractiveBotTests(unittest.TestCase):
 
     def test_non_message_update_is_ignored(self):
         self.assertIsNone(reply_for_update({"update_id": 2}))
+
+    def test_cv_command_requests_pdf(self):
+        self.assertIn("Upload your CV", reply_for_update(update("/cv"))[1])
+
+    @patch("interactive_bot.extract_pdf_preview", return_value="Maya Patel - Immunology")
+    @patch("interactive_bot.requests.get")
+    def test_pdf_cv_is_downloaded_and_previewed(self, get, extract):
+        metadata = unittest.mock.Mock()
+        metadata.json.return_value = {"result": {"file_path": "documents/cv.pdf"}}
+        downloaded = unittest.mock.Mock(content=b"%PDF-test")
+        get.side_effect = [metadata, downloaded]
+        pdf_update = {
+            "message": {
+                "from": {"id": 101},
+                "chat": {"id": 202},
+                "document": {
+                    "file_id": "safe-file-id",
+                    "file_name": "cv.pdf",
+                    "mime_type": "application/pdf",
+                    "file_size": 1000,
+                },
+            }
+        }
+        response = process_update(pdf_update, "test-token")
+        self.assertIn("Maya Patel - Immunology", response[1])
+        self.assertIn("not saved", response[1])
+        extract.assert_called_once_with(b"%PDF-test")
+
+    def test_non_pdf_cv_is_rejected(self):
+        file_update = {
+            "message": {
+                "chat": {"id": 202},
+                "document": {
+                    "file_id": "file-id",
+                    "file_name": "cv.docx",
+                    "mime_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    "file_size": 1000,
+                },
+            }
+        }
+        self.assertIn("as a PDF", process_update(file_update, "test-token")[1])
+
+    def test_oversized_pdf_is_rejected_before_download(self):
+        file_update = {
+            "message": {
+                "chat": {"id": 202},
+                "document": {
+                    "file_id": "file-id",
+                    "file_name": "cv.pdf",
+                    "mime_type": "application/pdf",
+                    "file_size": 9 * 1024 * 1024,
+                },
+            }
+        }
+        self.assertIn("smaller than 8 MB", process_update(file_update, "test-token")[1])
 
 
 if __name__ == "__main__":

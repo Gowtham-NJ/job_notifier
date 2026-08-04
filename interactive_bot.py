@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import io
 import os
 import time
 from pathlib import Path
@@ -8,6 +9,7 @@ from typing import Any
 
 import requests
 from dotenv import load_dotenv
+from pypdf import PdfReader
 
 from db import (
     confirm_user_profile,
@@ -31,6 +33,9 @@ SCIENCE_TERMS = {
     "environmental", "ecology", "earth", "geology", "astronomy", "mathematics",
     "computational", "structural", "cell", "biomedical", "epidemiology",
 }
+MAX_CV_BYTES = 8 * 1024 * 1024
+MAX_CV_PAGES = 30
+CV_PREVIEW_CHARS = 2800
 
 
 def _looks_scientific(value: str) -> bool:
@@ -45,6 +50,77 @@ def _profile_summary(user: dict[str, Any]) -> str:
         f"🧰 Skills: {user['skills']}\n\n"
         "Reply yes to save it, or no to enter it again."
     )
+
+
+def extract_pdf_preview(content: bytes) -> str:
+    if not content.startswith(b"%PDF-"):
+        raise ValueError("The uploaded file is not a valid PDF.")
+    reader = PdfReader(io.BytesIO(content))
+    if reader.is_encrypted:
+        raise ValueError("Password-protected PDFs are not supported.")
+    if len(reader.pages) > MAX_CV_PAGES:
+        raise ValueError(f"Please upload a CV with no more than {MAX_CV_PAGES} pages.")
+    extracted = []
+    for page in reader.pages:
+        text = " ".join((page.extract_text() or "").split())
+        if text:
+            extracted.append(text)
+        if sum(len(part) for part in extracted) >= CV_PREVIEW_CHARS:
+            break
+    preview = "\n\n".join(extracted).strip()
+    if not preview:
+        raise ValueError(
+            "I could not extract text from this PDF. It may be a scanned image; please try a text-based PDF."
+        )
+    return preview[:CV_PREVIEW_CHARS]
+
+
+def reply_for_pdf_document(update: dict[str, Any], token: str) -> tuple[int, str] | None:
+    message = update.get("message") or {}
+    document = message.get("document") or {}
+    chat_id = message.get("chat", {}).get("id")
+    if not document or not isinstance(chat_id, int):
+        return None
+    filename = str(document.get("file_name") or "")
+    mime_type = str(document.get("mime_type") or "")
+    size = int(document.get("file_size") or 0)
+    if mime_type != "application/pdf" or not filename.casefold().endswith(".pdf"):
+        return chat_id, "Please upload your CV as a PDF file."
+    if size <= 0 or size > MAX_CV_BYTES:
+        return chat_id, "Please upload a PDF smaller than 8 MB."
+    try:
+        metadata = requests.get(
+            f"{TELEGRAM_API_ROOT}/bot{token}/getFile",
+            params={"file_id": document["file_id"]},
+            timeout=20,
+        )
+        metadata.raise_for_status()
+        file_path = metadata.json()["result"]["file_path"]
+        downloaded = requests.get(
+            f"{TELEGRAM_API_ROOT}/file/bot{token}/{file_path}", timeout=30
+        )
+        downloaded.raise_for_status()
+        content = downloaded.content
+        if len(content) > MAX_CV_BYTES:
+            return chat_id, "Please upload a PDF smaller than 8 MB."
+        preview = extract_pdf_preview(content)
+    except (KeyError, requests.RequestException):
+        return chat_id, "I could not download that PDF from Telegram. Please try again."
+    except (ValueError, Exception) as exc:
+        # PDF parser exceptions are intentionally converted to a user-safe message.
+        message = str(exc) if isinstance(exc, ValueError) else "I could not read that PDF. Please try another file."
+        return chat_id, message
+    return chat_id, (
+        "I extracted this text preview from your CV (it was not saved):\n\n"
+        f"{preview}\n\n"
+        "Phase 3 only checks PDF extraction. Profile suggestions will come in the next phase."
+    )
+
+
+def process_update(update: dict[str, Any], token: str) -> tuple[int, str] | None:
+    if (update.get("message") or {}).get("document"):
+        return reply_for_pdf_document(update, token)
+    return reply_for_update(update)
 
 
 def reply_for_update(update: dict[str, Any]) -> tuple[int, str] | None:
@@ -67,6 +143,9 @@ def reply_for_update(update: dict[str, Any]) -> tuple[int, str] | None:
                 "molecular biology, or bioinformatics."
             )
         return chat_id, "Hello! 👋 What should I call you?"
+
+    if text.split()[0].casefold() == "/cv":
+        return chat_id, "Upload your CV as a text-based PDF smaller than 8 MB."
 
     if user and user.get("onboarding_state") == "awaiting_name":
         name = " ".join(text.split())[:80]
@@ -127,7 +206,7 @@ def run_polling(poll_timeout: int = 25) -> None:
             response.raise_for_status()
             for update in response.json().get("result", []):
                 offset = max(offset, int(update["update_id"]) + 1)
-                reply = reply_for_update(update)
+                reply = process_update(update, token)
                 if reply:
                     chat_id, text = reply
                     requests.post(
