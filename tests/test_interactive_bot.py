@@ -67,8 +67,8 @@ class InteractiveBotTests(unittest.TestCase):
         summary = reply_for_update(update("Flow cytometry, cell culture, Python"))[1]
         self.assertIn("Immunology and molecular biology", summary)
         self.assertIn("Flow cytometry, cell culture, Python", summary)
-        self.assertEqual(reply_for_update(update("yes"))[1], "Your science profile is saved! ✅")
-        self.assertEqual(db.get_bot_user(101)["onboarding_state"], "complete")
+        self.assertIn("What science-related roles", reply_for_update(update("yes"))[1])
+        self.assertEqual(db.get_bot_user(101)["onboarding_state"], "awaiting_target_roles")
 
     def test_non_science_field_is_rejected(self):
         reply_for_update(update("/start"))
@@ -134,7 +134,7 @@ class InteractiveBotTests(unittest.TestCase):
         self.assertEqual(user["science_fields"], "Immunology")
         self.assertEqual(user["skills"], "Flow cytometry, Python")
         self.assertEqual(user["career_stage"], "PhD")
-        self.assertEqual(user["onboarding_state"], "complete")
+        self.assertEqual(user["onboarding_state"], "awaiting_target_roles")
         self.assertIsNone(user["cv_draft_fields"])
 
     def test_rejected_cv_draft_uses_manual_flow(self):
@@ -184,6 +184,47 @@ class InteractiveBotTests(unittest.TestCase):
             }
         }
         self.assertIn("smaller than 8 MB", process_update(file_update, "test-token")[1])
+
+    def _create_confirmed_profile(self):
+        db.start_user_onboarding(101, 202)
+        db.save_user_name(101, 202, "Maya")
+        db.save_user_fields(101, "Immunology")
+        db.save_user_skills(101, "Flow cytometry")
+        db.confirm_user_profile(101)
+
+    def test_preferences_command_requires_science_profile(self):
+        self.assertIn("create your science profile", reply_for_update(update("/preferences"))[1])
+
+    def test_job_preferences_are_collected_and_confirmed(self):
+        self._create_confirmed_profile()
+        self.assertIn("countries, cities, or regions", reply_for_update(update("Postdoc and research scientist"))[1])
+        self.assertIn("work arrangement", reply_for_update(update("Germany and Netherlands"))[1])
+        summary = reply_for_update(update("hybrid"))[1]
+        self.assertIn("Postdoc and research scientist", summary)
+        self.assertIn("Germany and Netherlands", summary)
+        self.assertIn("Hybrid", summary)
+        self.assertIn("saved", reply_for_update(update("yes"))[1])
+        user = db.get_bot_user(101)
+        self.assertEqual(user["target_roles"], "Postdoc and research scientist")
+        self.assertEqual(user["preferred_locations"], "Germany and Netherlands")
+        self.assertEqual(user["work_mode"], "Hybrid")
+        self.assertEqual(user["onboarding_state"], "complete")
+
+    def test_invalid_work_mode_is_rejected(self):
+        self._create_confirmed_profile()
+        reply_for_update(update("Bioinformatician"))
+        reply_for_update(update("Worldwide"))
+        self.assertIn("remote, on-site, hybrid, or any", reply_for_update(update("sometimes"))[1])
+
+    def test_rejected_preferences_restart_roles(self):
+        self._create_confirmed_profile()
+        reply_for_update(update("Research scientist"))
+        reply_for_update(update("Anywhere"))
+        reply_for_update(update("any"))
+        self.assertIn("What science-related roles", reply_for_update(update("no"))[1])
+        user = db.get_bot_user(101)
+        self.assertIsNone(user["target_roles"])
+        self.assertEqual(user["onboarding_state"], "awaiting_target_roles")
 
 
 if __name__ == "__main__":

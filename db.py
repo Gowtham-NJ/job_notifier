@@ -59,6 +59,9 @@ def init_db() -> None:
             "cv_draft_fields",
             "cv_draft_skills",
             "cv_draft_career_stage",
+            "target_roles",
+            "preferred_locations",
+            "work_mode",
         ):
             if column not in existing_columns:
                 connection.execute(f"ALTER TABLE bot_users ADD COLUMN {column} TEXT")
@@ -197,7 +200,8 @@ def confirm_user_profile(telegram_user_id: int) -> None:
     try:
         connection.execute(
             """
-            UPDATE bot_users SET onboarding_state = 'complete', updated_at = CURRENT_TIMESTAMP
+            UPDATE bot_users SET onboarding_state = 'awaiting_target_roles',
+                updated_at = CURRENT_TIMESTAMP
             WHERE telegram_user_id = ?
             """,
             (telegram_user_id,),
@@ -270,7 +274,7 @@ def confirm_cv_profile(telegram_user_id: int) -> None:
                 cv_draft_fields = NULL,
                 cv_draft_skills = NULL,
                 cv_draft_career_stage = NULL,
-                onboarding_state = 'complete',
+                onboarding_state = 'awaiting_target_roles',
                 updated_at = CURRENT_TIMESTAMP
             WHERE telegram_user_id = ?
             """,
@@ -303,6 +307,104 @@ def discard_cv_profile(telegram_user_id: int) -> str:
         )
         connection.commit()
         return next_state
+    finally:
+        connection.close()
+
+
+def begin_job_preferences(telegram_user_id: int) -> bool:
+    connection = connect()
+    try:
+        row = connection.execute(
+            "SELECT science_fields, skills FROM bot_users WHERE telegram_user_id = ?",
+            (telegram_user_id,),
+        ).fetchone()
+        if not row or not row["science_fields"] or not row["skills"]:
+            return False
+        connection.execute(
+            """
+            UPDATE bot_users SET onboarding_state = 'awaiting_target_roles',
+                updated_at = CURRENT_TIMESTAMP WHERE telegram_user_id = ?
+            """,
+            (telegram_user_id,),
+        )
+        connection.commit()
+        return True
+    finally:
+        connection.close()
+
+
+def save_target_roles(telegram_user_id: int, target_roles: str) -> None:
+    connection = connect()
+    try:
+        connection.execute(
+            """
+            UPDATE bot_users SET target_roles = ?, onboarding_state = 'awaiting_locations',
+                updated_at = CURRENT_TIMESTAMP WHERE telegram_user_id = ?
+            """,
+            (target_roles, telegram_user_id),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+
+def save_preferred_locations(telegram_user_id: int, locations: str) -> None:
+    connection = connect()
+    try:
+        connection.execute(
+            """
+            UPDATE bot_users SET preferred_locations = ?, onboarding_state = 'awaiting_work_mode',
+                updated_at = CURRENT_TIMESTAMP WHERE telegram_user_id = ?
+            """,
+            (locations, telegram_user_id),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+
+def save_work_mode(telegram_user_id: int, work_mode: str) -> None:
+    connection = connect()
+    try:
+        connection.execute(
+            """
+            UPDATE bot_users SET work_mode = ?, onboarding_state = 'awaiting_preference_confirmation',
+                updated_at = CURRENT_TIMESTAMP WHERE telegram_user_id = ?
+            """,
+            (work_mode, telegram_user_id),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+
+def confirm_job_preferences(telegram_user_id: int) -> None:
+    connection = connect()
+    try:
+        connection.execute(
+            """
+            UPDATE bot_users SET onboarding_state = 'complete', updated_at = CURRENT_TIMESTAMP
+            WHERE telegram_user_id = ?
+            """,
+            (telegram_user_id,),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+
+def restart_job_preferences(telegram_user_id: int) -> None:
+    connection = connect()
+    try:
+        connection.execute(
+            """
+            UPDATE bot_users SET target_roles = NULL, preferred_locations = NULL,
+                work_mode = NULL, onboarding_state = 'awaiting_target_roles',
+                updated_at = CURRENT_TIMESTAMP WHERE telegram_user_id = ?
+            """,
+            (telegram_user_id,),
+        )
+        connection.commit()
     finally:
         connection.close()
 

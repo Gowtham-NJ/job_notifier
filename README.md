@@ -100,7 +100,7 @@ python main.py --dry-run
 
 Telegram is required and attempted first. Optional channels may remain configured as fallbacks; a job is considered delivered when at least one configured channel succeeds.
 
-## Interactive bot — Phase 4
+## Interactive bot — Phase 5
 
 The interactive onboarding currently supports:
 
@@ -111,6 +111,8 @@ The interactive onboarding currently supports:
 5. A user can send `/cv` and upload a text-based PDF CV.
 6. The bot deterministically infers a draft name, scientific fields, skills, and current/recent career stage.
 7. The user confirms the draft or rejects it and continues through manual onboarding.
+8. The bot collects target roles, preferred locations, and remote/on-site/hybrid preferences.
+9. The user confirms job preferences before they become active.
 
 Run it locally for testing:
 
@@ -118,7 +120,7 @@ Run it locally for testing:
 .venv/bin/python interactive_bot.py
 ```
 
-Keep that process running, open the bot in Telegram, and send `/start` or `/cv`. Stop it with `Ctrl+C`. PDF files are limited to 8 MB and 30 pages. Neither the PDF nor its raw text is saved; only a confirmed structured profile is retained. Extraction uses a local scientific vocabulary and no external AI service. The bot remains restricted to scientific profiles. This phase does not match jobs or schedule reminders yet.
+Keep that process running, open the bot in Telegram, and send `/start`, `/cv`, or `/preferences`. Stop it with `Ctrl+C`. PDF files are limited to 8 MB and 30 pages. Neither the PDF nor its raw text is saved; only a confirmed structured profile is retained. Extraction uses a local scientific vocabulary and no external AI service. The bot remains restricted to scientific profiles. This phase does not match jobs or schedule reminders yet.
 
 ### Telegram (primary)
 

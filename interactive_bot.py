@@ -12,15 +12,21 @@ from dotenv import load_dotenv
 from pypdf import PdfReader
 
 from db import (
+    begin_job_preferences,
     confirm_cv_profile,
+    confirm_job_preferences,
     confirm_user_profile,
     discard_cv_profile,
     get_bot_user,
     init_db,
     restart_science_profile,
+    restart_job_preferences,
+    save_preferred_locations,
+    save_target_roles,
     save_user_fields,
     save_user_name,
     save_user_skills,
+    save_work_mode,
     save_cv_profile_draft,
     start_user_onboarding,
 )
@@ -86,6 +92,25 @@ SKILL_PATTERNS = {
     "HPC": ("high-performance computing", "high performance computing", "hpc"),
 }
 
+TARGET_ROLE_TERMS = {
+    "postdoc", "postdoctoral", "scientist", "researcher", "research fellow",
+    "bioinformatician", "biologist", "chemist", "physicist", "engineer",
+    "faculty", "professor", "lecturer", "technician", "specialist", "analyst",
+    "developer", "programmer", "data science", "laboratory", "lab manager",
+    "principal investigator", "phd", "doctoral", "internship",
+}
+
+WORK_MODE_ALIASES = {
+    "remote": "Remote",
+    "on-site": "On-site",
+    "onsite": "On-site",
+    "on site": "On-site",
+    "hybrid": "Hybrid",
+    "any": "Any",
+    "all": "Any",
+    "flexible": "Any",
+}
+
 
 def _looks_scientific(value: str) -> bool:
     normalized = value.casefold()
@@ -98,6 +123,16 @@ def _profile_summary(user: dict[str, Any]) -> str:
         f"🔬 Fields: {user['science_fields']}\n"
         f"🧰 Skills: {user['skills']}\n\n"
         "Reply yes to save it, or no to enter it again."
+    )
+
+
+def _preference_summary(user: dict[str, Any]) -> str:
+    return (
+        "Please confirm your job preferences:\n\n"
+        f"💼 Target roles: {user['target_roles']}\n"
+        f"🌍 Preferred locations: {user['preferred_locations']}\n"
+        f"🏠 Work arrangement: {user['work_mode']}\n\n"
+        "Reply yes to save them, or no to enter them again."
     )
 
 
@@ -274,6 +309,14 @@ def reply_for_update(update: dict[str, Any]) -> tuple[int, str] | None:
     if text.split()[0].casefold() == "/cv":
         return chat_id, "Upload your CV as a text-based PDF smaller than 8 MB."
 
+    if text.split()[0].casefold() == "/preferences":
+        if begin_job_preferences(user_id):
+            return chat_id, (
+                "What science-related roles are you looking for? For example: postdoc, "
+                "research scientist, bioinformatician, or laboratory scientist."
+            )
+        return chat_id, "Please create your science profile first with /start or /cv."
+
     if user and user.get("onboarding_state") == "awaiting_name":
         name = " ".join(text.split())[:80]
         save_user_name(user_id, chat_id, name)
@@ -307,7 +350,10 @@ def reply_for_update(update: dict[str, Any]) -> tuple[int, str] | None:
         answer = text.casefold().strip(".! ")
         if answer in {"yes", "y"}:
             confirm_user_profile(user_id)
-            return chat_id, "Your science profile is saved! ✅"
+            return chat_id, (
+                "Your science profile is saved! ✅\n"
+                "What science-related roles are you looking for?"
+            )
         if answer in {"no", "n"}:
             restart_science_profile(user_id)
             return chat_id, "No problem. Which scientific fields are you interested in?"
@@ -317,7 +363,10 @@ def reply_for_update(update: dict[str, Any]) -> tuple[int, str] | None:
         answer = text.casefold().strip(".! ")
         if answer in {"yes", "y"}:
             confirm_cv_profile(user_id)
-            return chat_id, "Your CV-derived science profile is saved! ✅"
+            return chat_id, (
+                "Your CV-derived science profile is saved! ✅\n"
+                "What science-related roles are you looking for?"
+            )
         if answer in {"no", "n"}:
             next_state = discard_cv_profile(user_id)
             if next_state == "awaiting_name":
@@ -325,8 +374,49 @@ def reply_for_update(update: dict[str, Any]) -> tuple[int, str] | None:
             return chat_id, "No problem. Which scientific fields are you interested in?"
         return chat_id, "Please reply yes to save the CV draft or no to enter it manually."
 
+    if user and user.get("onboarding_state") == "awaiting_target_roles":
+        roles = " ".join(text.split())[:500]
+        normalized = roles.casefold()
+        if not any(term in normalized for term in TARGET_ROLE_TERMS):
+            return chat_id, (
+                "Please enter one or more science-related roles, such as postdoc, research "
+                "scientist, bioinformatician, laboratory scientist, or research software engineer."
+            )
+        save_target_roles(user_id, roles)
+        return chat_id, (
+            "Which countries, cities, or regions do you prefer? You can also answer "
+            "worldwide or anywhere."
+        )
+
+    if user and user.get("onboarding_state") == "awaiting_locations":
+        locations = " ".join(text.split())[:500]
+        if len(locations) < 2:
+            return chat_id, "Please enter at least one location, or answer worldwide."
+        save_preferred_locations(user_id, locations)
+        return chat_id, "Which work arrangement do you prefer: remote, on-site, hybrid, or any?"
+
+    if user and user.get("onboarding_state") == "awaiting_work_mode":
+        work_mode = WORK_MODE_ALIASES.get(text.casefold().strip(".! "))
+        if not work_mode:
+            return chat_id, "Please answer remote, on-site, hybrid, or any."
+        save_work_mode(user_id, work_mode)
+        return chat_id, _preference_summary(get_bot_user(user_id) or {})
+
+    if user and user.get("onboarding_state") == "awaiting_preference_confirmation":
+        answer = text.casefold().strip(".! ")
+        if answer in {"yes", "y"}:
+            confirm_job_preferences(user_id)
+            return chat_id, "Your job preferences are saved! ✅"
+        if answer in {"no", "n"}:
+            restart_job_preferences(user_id)
+            return chat_id, "No problem. What science-related roles are you looking for?"
+        return chat_id, "Please reply yes to save the preferences or no to enter them again."
+
     if user and user.get("name"):
-        return chat_id, "Your science profile is saved. Send /start to see your greeting."
+        return chat_id, (
+            "Your science profile is saved. Send /preferences to set job preferences "
+            "or /start to see your greeting."
+        )
     return chat_id, "Please send /start so I can introduce myself."
 
 
