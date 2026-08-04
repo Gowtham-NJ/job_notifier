@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import argparse
 import io
-import os
+import re
 import time
 from pathlib import Path
 from typing import Any
@@ -12,13 +12,16 @@ from dotenv import load_dotenv
 from pypdf import PdfReader
 
 from db import (
+    confirm_cv_profile,
     confirm_user_profile,
+    discard_cv_profile,
     get_bot_user,
     init_db,
     restart_science_profile,
     save_user_fields,
     save_user_name,
     save_user_skills,
+    save_cv_profile_draft,
     start_user_onboarding,
 )
 from notifiers import TELEGRAM_API_ROOT, validate_telegram_config
@@ -36,6 +39,52 @@ SCIENCE_TERMS = {
 MAX_CV_BYTES = 8 * 1024 * 1024
 MAX_CV_PAGES = 30
 CV_PREVIEW_CHARS = 2800
+CV_EXTRACTION_CHARS = 20_000
+
+FIELD_PATTERNS = {
+    "Immunology": ("immunology", "immune system", "immunological"),
+    "Molecular biology": ("molecular biology",),
+    "Cell biology": ("cell biology", "cellular biology"),
+    "Bioinformatics": ("bioinformatics", "computational genomics"),
+    "Computational biology": ("computational biology",),
+    "Biochemistry": ("biochemistry", "biochemical"),
+    "Microbiology": ("microbiology", "microbial"),
+    "Genetics and genomics": ("genetics", "genomics", "genome"),
+    "Neuroscience": ("neuroscience", "neurobiology"),
+    "Structural biology": ("structural biology",),
+    "Biophysics": ("biophysics", "biophysical"),
+    "Biotechnology": ("biotechnology", "biotech"),
+    "Computational chemistry": ("computational chemistry", "molecular simulation"),
+    "Chemistry": ("chemistry", "chemical science"),
+    "Materials science": ("materials science", "material science"),
+    "Physics": ("physics", "physical science"),
+    "Environmental science": ("environmental science", "ecology"),
+    "Clinical research": ("clinical research", "clinical trial"),
+}
+
+SKILL_PATTERNS = {
+    "Flow cytometry": ("flow cytometry", "facs"),
+    "Cell culture": ("cell culture", "tissue culture"),
+    "PCR": ("pcr", "polymerase chain reaction"),
+    "qPCR": ("qpcr", "real-time pcr"),
+    "RNA sequencing": ("rna-seq", "rna sequencing", "transcriptomics"),
+    "Next-generation sequencing": ("next-generation sequencing", "ngs"),
+    "CRISPR": ("crispr",),
+    "Western blotting": ("western blot",),
+    "ELISA": ("elisa",),
+    "Microscopy": ("microscopy", "confocal"),
+    "Mass spectrometry": ("mass spectrometry", "proteomics"),
+    "Protein purification": ("protein purification", "chromatography"),
+    "Molecular cloning": ("molecular cloning", "cloning"),
+    "Python": ("python",),
+    "R": ("r programming", "r studio", "rstudio"),
+    "Linux": ("linux",),
+    "Machine learning": ("machine learning", "deep learning"),
+    "Data analysis": ("data analysis", "statistical analysis"),
+    "Molecular dynamics": ("molecular dynamics", "gromacs", "amber"),
+    "DFT": ("density functional theory", "dft"),
+    "HPC": ("high-performance computing", "high performance computing", "hpc"),
+}
 
 
 def _looks_scientific(value: str) -> bool:
@@ -52,7 +101,7 @@ def _profile_summary(user: dict[str, Any]) -> str:
     )
 
 
-def extract_pdf_preview(content: bytes) -> str:
+def extract_pdf_text(content: bytes) -> str:
     if not content.startswith(b"%PDF-"):
         raise ValueError("The uploaded file is not a valid PDF.")
     reader = PdfReader(io.BytesIO(content))
@@ -60,26 +109,79 @@ def extract_pdf_preview(content: bytes) -> str:
         raise ValueError("Password-protected PDFs are not supported.")
     if len(reader.pages) > MAX_CV_PAGES:
         raise ValueError(f"Please upload a CV with no more than {MAX_CV_PAGES} pages.")
-    extracted = []
+    extracted: list[str] = []
     for page in reader.pages:
-        text = " ".join((page.extract_text() or "").split())
+        text = (page.extract_text() or "").strip()
         if text:
             extracted.append(text)
-        if sum(len(part) for part in extracted) >= CV_PREVIEW_CHARS:
+        if sum(len(part) for part in extracted) >= CV_EXTRACTION_CHARS:
             break
-    preview = "\n\n".join(extracted).strip()
-    if not preview:
+    full_text = "\n\n".join(extracted).strip()
+    if not full_text:
         raise ValueError(
             "I could not extract text from this PDF. It may be a scanned image; please try a text-based PDF."
         )
-    return preview[:CV_PREVIEW_CHARS]
+    return full_text[:CV_EXTRACTION_CHARS]
+
+
+def extract_pdf_preview(content: bytes) -> str:
+    return extract_pdf_text(content)[:CV_PREVIEW_CHARS]
+
+
+def _infer_name(text: str) -> str | None:
+    headings = {"curriculum vitae", "cv", "resume", "résumé"}
+    for raw_line in text.splitlines()[:20]:
+        line = " ".join(raw_line.split()).strip("|•- ")
+        words = line.split()
+        if (
+            line.casefold() in headings
+            or not 2 <= len(words) <= 5
+            or len(line) > 80
+            or "@" in line
+            or "http" in line.casefold()
+            or any(character.isdigit() for character in line)
+        ):
+            continue
+        if all(re.fullmatch(r"[^\W\d_]+(?:[-'][^\W\d_]+)?", word, re.UNICODE) for word in words):
+            return line.title() if line.isupper() else line
+    return None
+
+
+def infer_cv_profile(text: str) -> dict[str, str | None]:
+    normalized = " ".join(text.casefold().split())
+    fields = [
+        label for label, patterns in FIELD_PATTERNS.items()
+        if any(pattern in normalized for pattern in patterns)
+    ]
+    skills = [
+        label for label, patterns in SKILL_PATTERNS.items()
+        if any(pattern in normalized for pattern in patterns)
+    ]
+    career_signals = (
+        ("Postdoctoral", ("postdoctoral", "postdoc")),
+        ("PhD", ("ph.d", "phd", "doctoral candidate", "doctoral researcher")),
+        ("Research scientist", ("research scientist",)),
+        ("Master's", ("master of science", "msc", "m.sc")),
+        ("Bachelor's", ("bachelor of science", "bsc", "b.sc")),
+    )
+    career_stage = next(
+        (label for label, patterns in career_signals if any(pattern in normalized for pattern in patterns)),
+        "Not confidently detected",
+    )
+    return {
+        "name": _infer_name(text),
+        "fields": ", ".join(fields) or None,
+        "skills": ", ".join(skills) or None,
+        "career_stage": career_stage,
+    }
 
 
 def reply_for_pdf_document(update: dict[str, Any], token: str) -> tuple[int, str] | None:
     message = update.get("message") or {}
     document = message.get("document") or {}
     chat_id = message.get("chat", {}).get("id")
-    if not document or not isinstance(chat_id, int):
+    user_id = message.get("from", {}).get("id")
+    if not document or not isinstance(chat_id, int) or not isinstance(user_id, int):
         return None
     filename = str(document.get("file_name") or "")
     mime_type = str(document.get("mime_type") or "")
@@ -103,17 +205,42 @@ def reply_for_pdf_document(update: dict[str, Any], token: str) -> tuple[int, str
         content = downloaded.content
         if len(content) > MAX_CV_BYTES:
             return chat_id, "Please upload a PDF smaller than 8 MB."
-        preview = extract_pdf_preview(content)
+        text = extract_pdf_text(content)
     except (KeyError, requests.RequestException):
         return chat_id, "I could not download that PDF from Telegram. Please try again."
-    except (ValueError, Exception) as exc:
+    except ValueError as exc:
         # PDF parser exceptions are intentionally converted to a user-safe message.
-        message = str(exc) if isinstance(exc, ValueError) else "I could not read that PDF. Please try another file."
-        return chat_id, message
+        return chat_id, str(exc)
+    except Exception:
+        return chat_id, "I could not read that PDF. Please try another file."
+    draft = infer_cv_profile(text)
+    if not draft["fields"] or not draft["skills"]:
+        existing_user = get_bot_user(user_id)
+        if existing_user and existing_user.get("name"):
+            restart_science_profile(user_id)
+            next_question = "Which scientific fields are you interested in?"
+        else:
+            start_user_onboarding(user_id, chat_id)
+            next_question = "What should I call you?"
+        return chat_id, (
+            "I extracted the CV text, but could not confidently identify both scientific fields "
+            f"and skills. Nothing was saved. Please enter your profile manually. {next_question}"
+        )
+    save_cv_profile_draft(
+        user_id,
+        chat_id,
+        draft["name"],
+        draft["fields"],
+        draft["skills"],
+        str(draft["career_stage"]),
+    )
     return chat_id, (
-        "I extracted this text preview from your CV (it was not saved):\n\n"
-        f"{preview}\n\n"
-        "Phase 3 only checks PDF extraction. Profile suggestions will come in the next phase."
+        "I inferred this draft from your CV (the PDF and raw text were not saved):\n\n"
+        f"👤 Name: {draft['name'] or 'Not confidently detected'}\n"
+        f"🔬 Fields: {draft['fields']}\n"
+        f"🧰 Skills: {draft['skills']}\n"
+        f"🎓 Current/recent career stage: {draft['career_stage']}\n\n"
+        "Reply yes to save this draft, or no to enter your details manually."
     )
 
 
@@ -185,6 +312,18 @@ def reply_for_update(update: dict[str, Any]) -> tuple[int, str] | None:
             restart_science_profile(user_id)
             return chat_id, "No problem. Which scientific fields are you interested in?"
         return chat_id, "Please reply yes to save the profile or no to enter it again."
+
+    if user and user.get("onboarding_state") == "awaiting_cv_confirmation":
+        answer = text.casefold().strip(".! ")
+        if answer in {"yes", "y"}:
+            confirm_cv_profile(user_id)
+            return chat_id, "Your CV-derived science profile is saved! ✅"
+        if answer in {"no", "n"}:
+            next_state = discard_cv_profile(user_id)
+            if next_state == "awaiting_name":
+                return chat_id, "No problem. What should I call you?"
+            return chat_id, "No problem. Which scientific fields are you interested in?"
+        return chat_id, "Please reply yes to save the CV draft or no to enter it manually."
 
     if user and user.get("name"):
         return chat_id, "Your science profile is saved. Send /start to see your greeting."

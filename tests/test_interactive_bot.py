@@ -4,7 +4,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import db
-from interactive_bot import process_update, reply_for_update
+from interactive_bot import infer_cv_profile, process_update, reply_for_update
 
 
 def update(text: str, user_id: int = 101, chat_id: int = 202) -> dict:
@@ -93,9 +93,12 @@ class InteractiveBotTests(unittest.TestCase):
     def test_cv_command_requests_pdf(self):
         self.assertIn("Upload your CV", reply_for_update(update("/cv"))[1])
 
-    @patch("interactive_bot.extract_pdf_preview", return_value="Maya Patel - Immunology")
+    @patch(
+        "interactive_bot.extract_pdf_text",
+        return_value="Maya Patel\nPhD in Immunology\nFlow cytometry, cell culture, Python",
+    )
     @patch("interactive_bot.requests.get")
-    def test_pdf_cv_is_downloaded_and_previewed(self, get, extract):
+    def test_pdf_cv_is_downloaded_and_profile_is_inferred(self, get, extract):
         metadata = unittest.mock.Mock()
         metadata.json.return_value = {"result": {"file_path": "documents/cv.pdf"}}
         downloaded = unittest.mock.Mock(content=b"%PDF-test")
@@ -113,13 +116,49 @@ class InteractiveBotTests(unittest.TestCase):
             }
         }
         response = process_update(pdf_update, "test-token")
-        self.assertIn("Maya Patel - Immunology", response[1])
-        self.assertIn("not saved", response[1])
+        self.assertIn("Name: Maya Patel", response[1])
+        self.assertIn("Fields: Immunology", response[1])
+        self.assertIn("Flow cytometry", response[1])
+        self.assertIn("Current/recent career stage: PhD", response[1])
+        self.assertIn("raw text were not saved", response[1])
         extract.assert_called_once_with(b"%PDF-test")
+        self.assertEqual(db.get_bot_user(101)["onboarding_state"], "awaiting_cv_confirmation")
+
+    def test_cv_draft_can_be_confirmed(self):
+        db.save_cv_profile_draft(
+            101, 202, "Maya Patel", "Immunology", "Flow cytometry, Python", "PhD"
+        )
+        self.assertIn("saved", reply_for_update(update("yes"))[1])
+        user = db.get_bot_user(101)
+        self.assertEqual(user["name"], "Maya Patel")
+        self.assertEqual(user["science_fields"], "Immunology")
+        self.assertEqual(user["skills"], "Flow cytometry, Python")
+        self.assertEqual(user["career_stage"], "PhD")
+        self.assertEqual(user["onboarding_state"], "complete")
+        self.assertIsNone(user["cv_draft_fields"])
+
+    def test_rejected_cv_draft_uses_manual_flow(self):
+        db.save_cv_profile_draft(
+            101, 202, "Maya Patel", "Immunology", "Flow cytometry", "PhD"
+        )
+        self.assertIn("What should I call you", reply_for_update(update("no"))[1])
+        self.assertEqual(db.get_bot_user(101)["onboarding_state"], "awaiting_name")
+
+    def test_cv_profile_inference_is_deterministic(self):
+        draft = infer_cv_profile(
+            "Alex Morgan\nPostdoctoral researcher in molecular biology and bioinformatics. "
+            "Experienced with RNA-seq, CRISPR, Python, and machine learning."
+        )
+        self.assertEqual(draft["name"], "Alex Morgan")
+        self.assertIn("Molecular biology", draft["fields"])
+        self.assertIn("Bioinformatics", draft["fields"])
+        self.assertIn("RNA sequencing", draft["skills"])
+        self.assertEqual(draft["career_stage"], "Postdoctoral")
 
     def test_non_pdf_cv_is_rejected(self):
         file_update = {
             "message": {
+                "from": {"id": 101},
                 "chat": {"id": 202},
                 "document": {
                     "file_id": "file-id",
@@ -134,6 +173,7 @@ class InteractiveBotTests(unittest.TestCase):
     def test_oversized_pdf_is_rejected_before_download(self):
         file_update = {
             "message": {
+                "from": {"id": 101},
                 "chat": {"id": 202},
                 "document": {
                     "file_id": "file-id",

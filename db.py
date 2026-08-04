@@ -51,7 +51,15 @@ def init_db() -> None:
         existing_columns = {
             row["name"] for row in connection.execute("PRAGMA table_info(bot_users)").fetchall()
         }
-        for column in ("science_fields", "skills"):
+        for column in (
+            "science_fields",
+            "skills",
+            "career_stage",
+            "cv_draft_name",
+            "cv_draft_fields",
+            "cv_draft_skills",
+            "cv_draft_career_stage",
+        ):
             if column not in existing_columns:
                 connection.execute(f"ALTER TABLE bot_users ADD COLUMN {column} TEXT")
         connection.commit()
@@ -212,6 +220,89 @@ def restart_science_profile(telegram_user_id: int) -> None:
             (telegram_user_id,),
         )
         connection.commit()
+    finally:
+        connection.close()
+
+
+def save_cv_profile_draft(
+    telegram_user_id: int,
+    chat_id: int,
+    name: str | None,
+    fields: str,
+    skills: str,
+    career_stage: str,
+) -> None:
+    connection = connect()
+    try:
+        connection.execute(
+            """
+            INSERT INTO bot_users (
+                telegram_user_id, chat_id, onboarding_state, cv_draft_name,
+                cv_draft_fields, cv_draft_skills, cv_draft_career_stage
+            ) VALUES (?, ?, 'awaiting_cv_confirmation', ?, ?, ?, ?)
+            ON CONFLICT(telegram_user_id) DO UPDATE SET
+                chat_id = excluded.chat_id,
+                onboarding_state = 'awaiting_cv_confirmation',
+                cv_draft_name = excluded.cv_draft_name,
+                cv_draft_fields = excluded.cv_draft_fields,
+                cv_draft_skills = excluded.cv_draft_skills,
+                cv_draft_career_stage = excluded.cv_draft_career_stage,
+                updated_at = CURRENT_TIMESTAMP
+            """,
+            (telegram_user_id, chat_id, name, fields, skills, career_stage),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+
+def confirm_cv_profile(telegram_user_id: int) -> None:
+    connection = connect()
+    try:
+        connection.execute(
+            """
+            UPDATE bot_users SET
+                name = COALESCE(cv_draft_name, name),
+                science_fields = cv_draft_fields,
+                skills = cv_draft_skills,
+                career_stage = cv_draft_career_stage,
+                cv_draft_name = NULL,
+                cv_draft_fields = NULL,
+                cv_draft_skills = NULL,
+                cv_draft_career_stage = NULL,
+                onboarding_state = 'complete',
+                updated_at = CURRENT_TIMESTAMP
+            WHERE telegram_user_id = ?
+            """,
+            (telegram_user_id,),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+
+def discard_cv_profile(telegram_user_id: int) -> str:
+    connection = connect()
+    try:
+        row = connection.execute(
+            "SELECT name FROM bot_users WHERE telegram_user_id = ?", (telegram_user_id,)
+        ).fetchone()
+        next_state = "awaiting_fields" if row and row["name"] else "awaiting_name"
+        connection.execute(
+            """
+            UPDATE bot_users SET
+                cv_draft_name = NULL,
+                cv_draft_fields = NULL,
+                cv_draft_skills = NULL,
+                cv_draft_career_stage = NULL,
+                onboarding_state = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE telegram_user_id = ?
+            """,
+            (next_state, telegram_user_id),
+        )
+        connection.commit()
+        return next_state
     finally:
         connection.close()
 
