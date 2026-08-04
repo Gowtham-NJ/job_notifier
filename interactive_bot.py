@@ -1,21 +1,26 @@
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import io
 import re
 import time
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import requests
 from dotenv import load_dotenv
 from pypdf import PdfReader
 
 from db import (
+    accept_digest_opt_in,
     begin_job_preferences,
+    begin_digest_schedule,
     begin_profile_deletion,
     cancel_profile_deletion,
     confirm_cv_profile,
+    confirm_digest_schedule,
     confirm_job_preferences,
     confirm_user_profile,
     discard_cv_profile,
@@ -23,8 +28,12 @@ from db import (
     get_bot_user,
     init_db,
     list_catalog_jobs,
+    pause_digest_schedule,
     restart_science_profile,
     restart_job_preferences,
+    restart_digest_schedule,
+    save_digest_time,
+    save_digest_timezone,
     save_preferred_locations,
     save_target_roles,
     save_user_fields,
@@ -143,6 +152,12 @@ def _preference_summary(user: dict[str, Any]) -> str:
 
 def _stored_profile(user: dict[str, Any]) -> str:
     value = lambda key: user.get(key) or "Not set"
+    if user.get("digest_enabled"):
+        digest = f"Daily at {value('digest_time')} ({value('digest_timezone')})"
+    elif user.get("digest_time") and user.get("digest_timezone"):
+        digest = f"Paused - daily at {user['digest_time']} ({user['digest_timezone']})"
+    else:
+        digest = "Not configured"
     return (
         "Your stored profile:\n\n"
         f"👤 Name: {value('name')}\n"
@@ -151,9 +166,31 @@ def _stored_profile(user: dict[str, Any]) -> str:
         f"🎓 Current/recent career stage: {value('career_stage')}\n"
         f"💼 Target roles: {value('target_roles')}\n"
         f"🌍 Preferred locations: {value('preferred_locations')}\n"
-        f"🏠 Work arrangement: {value('work_mode')}\n\n"
+        f"🏠 Work arrangement: {value('work_mode')}\n"
+        f"⏰ Daily digest: {digest}\n\n"
         "Use /preferences to change job preferences or /delete_profile to remove your data."
     )
+
+
+def normalize_digest_time(value: str) -> str | None:
+    cleaned = " ".join(value.strip().upper().split())
+    for time_format in ("%H:%M", "%H", "%I:%M %p", "%I %p"):
+        try:
+            return dt.datetime.strptime(cleaned, time_format).strftime("%H:%M")
+        except ValueError:
+            continue
+    return None
+
+
+def normalize_timezone(value: str) -> str | None:
+    cleaned = value.strip()
+    aliases = {"utc": "UTC", "prague": "Europe/Prague"}
+    candidate = aliases.get(cleaned.casefold(), cleaned)
+    try:
+        ZoneInfo(candidate)
+        return candidate
+    except (ZoneInfoNotFoundError, ValueError):
+        return None
 
 
 def _format_job_matches(user: dict[str, Any], matches: list[PersonalizedMatch]) -> str:
@@ -375,6 +412,16 @@ def reply_for_update(update: dict[str, Any]) -> tuple[int, str] | None:
             return chat_id, "The science job catalogue is empty. Please try again after a collector run."
         return chat_id, _format_job_matches(user, find_matching_jobs(user, jobs, limit=5))
 
+    if text.split()[0].casefold() == "/schedule":
+        if not begin_digest_schedule(user_id):
+            return chat_id, "Please complete your science profile and /preferences first."
+        return chat_id, "Would you like a daily personalized job digest? Reply yes or no."
+
+    if text.split()[0].casefold() == "/pause":
+        if pause_digest_schedule(user_id):
+            return chat_id, "Daily job reminders are paused. Use /schedule to enable them again."
+        return chat_id, "No profile is stored for you."
+
     if text.split()[0].casefold() == "/delete_profile":
         if not begin_profile_deletion(user_id):
             return chat_id, "No profile is stored for you."
@@ -391,6 +438,52 @@ def reply_for_update(update: dict[str, Any]) -> tuple[int, str] | None:
             cancel_profile_deletion(user_id)
             return chat_id, "Deletion cancelled. Your profile is unchanged."
         return chat_id, "Type DELETE exactly to confirm, or type cancel to keep your data."
+
+    if user and user.get("onboarding_state") == "awaiting_digest_opt_in":
+        answer = text.casefold().strip(".! ")
+        if answer in {"yes", "y"}:
+            accept_digest_opt_in(user_id)
+            return chat_id, "What local time should the daily digest arrive? For example: 08:30 or 7 PM."
+        if answer in {"no", "n"}:
+            pause_digest_schedule(user_id)
+            return chat_id, "Daily job reminders are disabled. You can enable them later with /schedule."
+        return chat_id, "Please reply yes or no."
+
+    if user and user.get("onboarding_state") == "awaiting_digest_time":
+        digest_time = normalize_digest_time(text)
+        if not digest_time:
+            return chat_id, "Please enter a valid time such as 08:30, 20:00, or 7 PM."
+        save_digest_time(user_id, digest_time)
+        return chat_id, (
+            "What is your timezone? For example: Europe/Prague, Asia/Kolkata, "
+            "America/New_York, or UTC."
+        )
+
+    if user and user.get("onboarding_state") == "awaiting_digest_timezone":
+        timezone = normalize_timezone(text)
+        if not timezone:
+            return chat_id, (
+                "Please enter a valid timezone such as Europe/Prague, Asia/Kolkata, "
+                "America/New_York, or UTC."
+            )
+        save_digest_timezone(user_id, timezone)
+        updated = get_bot_user(user_id) or {}
+        return chat_id, (
+            "Please confirm your reminder schedule:\n\n"
+            f"⏰ Daily at {updated.get('digest_time')}\n"
+            f"🌐 Timezone: {updated.get('digest_timezone')}\n\n"
+            "Reply yes to save it, or no to enter it again."
+        )
+
+    if user and user.get("onboarding_state") == "awaiting_digest_confirmation":
+        answer = text.casefold().strip(".! ")
+        if answer in {"yes", "y"}:
+            confirm_digest_schedule(user_id)
+            return chat_id, "Your daily job reminder schedule is saved! ✅"
+        if answer in {"no", "n"}:
+            restart_digest_schedule(user_id)
+            return chat_id, "No problem. Would you like a daily personalized job digest?"
+        return chat_id, "Please reply yes to save the schedule or no to enter it again."
 
     if user and user.get("onboarding_state") == "awaiting_name":
         name = " ".join(text.split())[:80]

@@ -4,7 +4,13 @@ from pathlib import Path
 from unittest.mock import patch
 
 import db
-from interactive_bot import infer_cv_profile, process_update, reply_for_update
+from interactive_bot import (
+    infer_cv_profile,
+    normalize_digest_time,
+    normalize_timezone,
+    process_update,
+    reply_for_update,
+)
 
 
 def update(text: str, user_id: int = 101, chat_id: int = 202) -> dict:
@@ -281,6 +287,46 @@ class InteractiveBotTests(unittest.TestCase):
         self.assertIn("Top job matches for Maya", response)
         self.assertIn("Research Scientist in Immunology", response)
         self.assertIn("https://example.org/jobs/immunology", response)
+
+    def test_schedule_is_collected_normalized_and_confirmed(self):
+        self._create_complete_profile()
+        self.assertIn("daily personalized", reply_for_update(update("/schedule"))[1])
+        self.assertIn("local time", reply_for_update(update("yes"))[1])
+        self.assertIn("timezone", reply_for_update(update("7:30 PM"))[1])
+        summary = reply_for_update(update("Europe/Prague"))[1]
+        self.assertIn("19:30", summary)
+        self.assertIn("Europe/Prague", summary)
+        self.assertIn("saved", reply_for_update(update("yes"))[1])
+        user = db.get_bot_user(101)
+        self.assertEqual(user["digest_enabled"], 1)
+        self.assertEqual(user["digest_time"], "19:30")
+        self.assertEqual(user["digest_timezone"], "Europe/Prague")
+
+    def test_invalid_schedule_values_are_rejected(self):
+        self._create_complete_profile()
+        reply_for_update(update("/schedule"))
+        reply_for_update(update("yes"))
+        self.assertIn("valid time", reply_for_update(update("after dinner"))[1])
+        reply_for_update(update("08:00"))
+        self.assertIn("valid timezone", reply_for_update(update("Middle Earth"))[1])
+
+    def test_pause_retains_schedule_and_profile_displays_it(self):
+        self._create_complete_profile()
+        db.save_digest_time(101, "08:00")
+        db.save_digest_timezone(101, "Europe/Prague")
+        db.confirm_digest_schedule(101)
+        self.assertIn("paused", reply_for_update(update("/pause"))[1])
+        user = db.get_bot_user(101)
+        self.assertEqual(user["digest_enabled"], 0)
+        self.assertEqual(user["digest_time"], "08:00")
+        self.assertIn("Paused - daily at 08:00", reply_for_update(update("/profile"))[1])
+
+    def test_time_and_timezone_normalizers(self):
+        self.assertEqual(normalize_digest_time("7 PM"), "19:00")
+        self.assertEqual(normalize_digest_time("07:15"), "07:15")
+        self.assertIsNone(normalize_digest_time("tomorrow morning"))
+        self.assertEqual(normalize_timezone("Prague"), "Europe/Prague")
+        self.assertIsNone(normalize_timezone("Not/A_Real_Zone"))
 
 
 if __name__ == "__main__":

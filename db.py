@@ -83,9 +83,15 @@ def init_db() -> None:
             "preferred_locations",
             "work_mode",
             "deletion_previous_state",
+            "digest_time",
+            "digest_timezone",
         ):
             if column not in existing_columns:
                 connection.execute(f"ALTER TABLE bot_users ADD COLUMN {column} TEXT")
+        if "digest_enabled" not in existing_columns:
+            connection.execute(
+                "ALTER TABLE bot_users ADD COLUMN digest_enabled INTEGER NOT NULL DEFAULT 0"
+            )
         connection.commit()
     finally:
         connection.close()
@@ -528,6 +534,124 @@ def delete_bot_user(telegram_user_id: int) -> bool:
     try:
         cursor = connection.execute(
             "DELETE FROM bot_users WHERE telegram_user_id = ?", (telegram_user_id,)
+        )
+        connection.commit()
+        return cursor.rowcount > 0
+    finally:
+        connection.close()
+
+
+def begin_digest_schedule(telegram_user_id: int) -> bool:
+    connection = connect()
+    try:
+        row = connection.execute(
+            """
+            SELECT target_roles, preferred_locations, work_mode FROM bot_users
+            WHERE telegram_user_id = ?
+            """,
+            (telegram_user_id,),
+        ).fetchone()
+        if not row or any(not row[key] for key in row.keys()):
+            return False
+        connection.execute(
+            """
+            UPDATE bot_users SET onboarding_state = 'awaiting_digest_opt_in',
+                updated_at = CURRENT_TIMESTAMP WHERE telegram_user_id = ?
+            """,
+            (telegram_user_id,),
+        )
+        connection.commit()
+        return True
+    finally:
+        connection.close()
+
+
+def save_digest_time(telegram_user_id: int, digest_time: str) -> None:
+    connection = connect()
+    try:
+        connection.execute(
+            """
+            UPDATE bot_users SET digest_time = ?, onboarding_state = 'awaiting_digest_timezone',
+                updated_at = CURRENT_TIMESTAMP WHERE telegram_user_id = ?
+            """,
+            (digest_time, telegram_user_id),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+
+def accept_digest_opt_in(telegram_user_id: int) -> None:
+    connection = connect()
+    try:
+        connection.execute(
+            """
+            UPDATE bot_users SET onboarding_state = 'awaiting_digest_time',
+                updated_at = CURRENT_TIMESTAMP WHERE telegram_user_id = ?
+            """,
+            (telegram_user_id,),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+
+def save_digest_timezone(telegram_user_id: int, timezone: str) -> None:
+    connection = connect()
+    try:
+        connection.execute(
+            """
+            UPDATE bot_users SET digest_timezone = ?,
+                onboarding_state = 'awaiting_digest_confirmation',
+                updated_at = CURRENT_TIMESTAMP WHERE telegram_user_id = ?
+            """,
+            (timezone, telegram_user_id),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+
+def confirm_digest_schedule(telegram_user_id: int) -> None:
+    connection = connect()
+    try:
+        connection.execute(
+            """
+            UPDATE bot_users SET digest_enabled = 1, onboarding_state = 'complete',
+                updated_at = CURRENT_TIMESTAMP WHERE telegram_user_id = ?
+            """,
+            (telegram_user_id,),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+
+def restart_digest_schedule(telegram_user_id: int) -> None:
+    connection = connect()
+    try:
+        connection.execute(
+            """
+            UPDATE bot_users SET digest_enabled = 0, digest_time = NULL,
+                digest_timezone = NULL, onboarding_state = 'awaiting_digest_opt_in',
+                updated_at = CURRENT_TIMESTAMP WHERE telegram_user_id = ?
+            """,
+            (telegram_user_id,),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+
+def pause_digest_schedule(telegram_user_id: int) -> bool:
+    connection = connect()
+    try:
+        cursor = connection.execute(
+            """
+            UPDATE bot_users SET digest_enabled = 0, onboarding_state = 'complete',
+                updated_at = CURRENT_TIMESTAMP WHERE telegram_user_id = ?
+            """,
+            (telegram_user_id,),
         )
         connection.commit()
         return cursor.rowcount > 0
