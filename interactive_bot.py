@@ -13,10 +13,13 @@ from pypdf import PdfReader
 
 from db import (
     begin_job_preferences,
+    begin_profile_deletion,
+    cancel_profile_deletion,
     confirm_cv_profile,
     confirm_job_preferences,
     confirm_user_profile,
     discard_cv_profile,
+    delete_bot_user,
     get_bot_user,
     init_db,
     restart_science_profile,
@@ -133,6 +136,21 @@ def _preference_summary(user: dict[str, Any]) -> str:
         f"🌍 Preferred locations: {user['preferred_locations']}\n"
         f"🏠 Work arrangement: {user['work_mode']}\n\n"
         "Reply yes to save them, or no to enter them again."
+    )
+
+
+def _stored_profile(user: dict[str, Any]) -> str:
+    value = lambda key: user.get(key) or "Not set"
+    return (
+        "Your stored profile:\n\n"
+        f"👤 Name: {value('name')}\n"
+        f"🔬 Scientific fields: {value('science_fields')}\n"
+        f"🧰 Skills: {value('skills')}\n"
+        f"🎓 Current/recent career stage: {value('career_stage')}\n"
+        f"💼 Target roles: {value('target_roles')}\n"
+        f"🌍 Preferred locations: {value('preferred_locations')}\n"
+        f"🏠 Work arrangement: {value('work_mode')}\n\n"
+        "Use /preferences to change job preferences or /delete_profile to remove your data."
     )
 
 
@@ -316,6 +334,28 @@ def reply_for_update(update: dict[str, Any]) -> tuple[int, str] | None:
                 "research scientist, bioinformatician, or laboratory scientist."
             )
         return chat_id, "Please create your science profile first with /start or /cv."
+
+    if text.split()[0].casefold() == "/profile":
+        if not user:
+            return chat_id, "No profile is stored for you. Send /start or /cv to create one."
+        return chat_id, _stored_profile(user)
+
+    if text.split()[0].casefold() == "/delete_profile":
+        if not begin_profile_deletion(user_id):
+            return chat_id, "No profile is stored for you."
+        return chat_id, (
+            "This will permanently delete your profile and job preferences. Shared job listings "
+            "will not be affected. Type DELETE exactly to confirm, or type cancel to keep your data."
+        )
+
+    if user and user.get("onboarding_state") == "awaiting_deletion_confirmation":
+        if text == "DELETE":
+            delete_bot_user(user_id)
+            return chat_id, "Your profile and job preferences have been permanently deleted."
+        if text.casefold().strip(".! ") in {"cancel", "no", "n"}:
+            cancel_profile_deletion(user_id)
+            return chat_id, "Deletion cancelled. Your profile is unchanged."
+        return chat_id, "Type DELETE exactly to confirm, or type cancel to keep your data."
 
     if user and user.get("onboarding_state") == "awaiting_name":
         name = " ".join(text.split())[:80]

@@ -192,6 +192,13 @@ class InteractiveBotTests(unittest.TestCase):
         db.save_user_skills(101, "Flow cytometry")
         db.confirm_user_profile(101)
 
+    def _create_complete_profile(self):
+        self._create_confirmed_profile()
+        db.save_target_roles(101, "Research scientist")
+        db.save_preferred_locations(101, "Europe")
+        db.save_work_mode(101, "Hybrid")
+        db.confirm_job_preferences(101)
+
     def test_preferences_command_requires_science_profile(self):
         self.assertIn("create your science profile", reply_for_update(update("/preferences"))[1])
 
@@ -225,6 +232,33 @@ class InteractiveBotTests(unittest.TestCase):
         user = db.get_bot_user(101)
         self.assertIsNone(user["target_roles"])
         self.assertEqual(user["onboarding_state"], "awaiting_target_roles")
+
+    def test_profile_command_shows_stored_data(self):
+        self._create_complete_profile()
+        response = reply_for_update(update("/profile"))[1]
+        self.assertIn("Name: Maya", response)
+        self.assertIn("Scientific fields: Immunology", response)
+        self.assertIn("Target roles: Research scientist", response)
+        self.assertIn("Work arrangement: Hybrid", response)
+
+    def test_profile_command_handles_missing_user(self):
+        self.assertIn("No profile is stored", reply_for_update(update("/profile"))[1])
+
+    def test_profile_deletion_can_be_cancelled(self):
+        self._create_complete_profile()
+        self.assertIn("Type DELETE", reply_for_update(update("/delete_profile"))[1])
+        self.assertIn("cancelled", reply_for_update(update("cancel"))[1])
+        user = db.get_bot_user(101)
+        self.assertEqual(user["onboarding_state"], "complete")
+        self.assertEqual(user["name"], "Maya")
+
+    def test_profile_deletion_requires_exact_confirmation(self):
+        self._create_complete_profile()
+        reply_for_update(update("/delete_profile"))
+        self.assertIn("Type DELETE exactly", reply_for_update(update("delete"))[1])
+        self.assertIsNotNone(db.get_bot_user(101))
+        self.assertIn("permanently deleted", reply_for_update(update("DELETE"))[1])
+        self.assertIsNone(db.get_bot_user(101))
 
 
 if __name__ == "__main__":

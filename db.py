@@ -62,6 +62,7 @@ def init_db() -> None:
             "target_roles",
             "preferred_locations",
             "work_mode",
+            "deletion_previous_state",
         ):
             if column not in existing_columns:
                 connection.execute(f"ALTER TABLE bot_users ADD COLUMN {column} TEXT")
@@ -405,6 +406,59 @@ def restart_job_preferences(telegram_user_id: int) -> None:
             (telegram_user_id,),
         )
         connection.commit()
+    finally:
+        connection.close()
+
+
+def begin_profile_deletion(telegram_user_id: int) -> bool:
+    connection = connect()
+    try:
+        row = connection.execute(
+            "SELECT onboarding_state FROM bot_users WHERE telegram_user_id = ?",
+            (telegram_user_id,),
+        ).fetchone()
+        if not row:
+            return False
+        connection.execute(
+            """
+            UPDATE bot_users SET deletion_previous_state = onboarding_state,
+                onboarding_state = 'awaiting_deletion_confirmation',
+                updated_at = CURRENT_TIMESTAMP WHERE telegram_user_id = ?
+            """,
+            (telegram_user_id,),
+        )
+        connection.commit()
+        return True
+    finally:
+        connection.close()
+
+
+def cancel_profile_deletion(telegram_user_id: int) -> None:
+    connection = connect()
+    try:
+        connection.execute(
+            """
+            UPDATE bot_users SET
+                onboarding_state = COALESCE(deletion_previous_state, 'complete'),
+                deletion_previous_state = NULL,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE telegram_user_id = ?
+            """,
+            (telegram_user_id,),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+
+def delete_bot_user(telegram_user_id: int) -> bool:
+    connection = connect()
+    try:
+        cursor = connection.execute(
+            "DELETE FROM bot_users WHERE telegram_user_id = ?", (telegram_user_id,)
+        )
+        connection.commit()
+        return cursor.rowcount > 0
     finally:
         connection.close()
 
