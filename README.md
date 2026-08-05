@@ -100,7 +100,7 @@ python main.py --dry-run
 
 Telegram is required and attempted first. Optional channels may remain configured as fallbacks; a job is considered delivered when at least one configured channel succeeds.
 
-## Interactive bot — Phase 10
+## Interactive bot — Phase 11
 
 The interactive onboarding currently supports:
 
@@ -147,7 +147,40 @@ Send one explicit test message without recording jobs as delivered:
 .venv/bin/python digest.py --test-user TELEGRAM_USER_ID --send
 ```
 
-The digest runner is not yet connected to GitHub Actions or another scheduler. Automatic multi-user delivery requires the interactive bot, catalogue, profiles, and digest process to share one persistent database.
+`service.py` is the Phase 11 persistent entry point. It keeps Telegram polling active, refreshes the shared catalogue every three hours, and checks for due personalized digests every minute. All three operations share one SQLite database. The existing GitHub Actions workflow remains unchanged and continues running the original tailored notifier.
+
+Test the persistent service locally before deploying it:
+
+```bash
+.venv/bin/python -m unittest discover -s tests -v
+.venv/bin/python main.py --dry-run --sample sample_jobs.json
+.venv/bin/python service.py
+```
+
+The last command starts the real Telegram poller and scheduler. Send `/start` or `/jobs` in Telegram, then stop it with `Ctrl+C`. It may perform a real catalogue refresh, but the collector runs in catalogue-only mode and does not send original-notifier alerts or alter `bot_state.json`. Due opted-in digests can be sent, exactly as they will be in production.
+
+### Persistent Railway deployment
+
+Railway is the recommended simple host for this long-polling SQLite version. Create one service from the GitHub repository and attach one volume mounted at `/data`. Add these service variables in Railway (never add their values to Git):
+
+```dotenv
+TELEGRAM_BOT_TOKEN=<BotFather token>
+TELEGRAM_CHAT_ID=<owner chat ID used by the legacy notifier>
+JOB_DB_PATH=/data/jobs.db
+CATALOG_INTERVAL_SECONDS=10800
+DIGEST_CHECK_INTERVAL_SECONDS=60
+POST_RUN_SUMMARY=false
+```
+
+The included `Procfile` starts `python service.py`. Keep exactly one replica because Telegram long polling and a single SQLite volume are intentionally single-process. Do not enable Railway Serverless/sleep for this service; the bot must remain running to receive messages. Confirm in the deployment logs that the persistent service and Telegram poller started, then send `/start` to the bot. Profiles created in a local `jobs.db` are not automatically copied to Railway, so create the profile again after first deployment unless you deliberately migrate that database.
+
+The deployment service performs only catalogue refreshes and personalized digests. Do not replace the existing GitHub Actions workflow: it preserves the original three-hour tailored notification behavior and its separate cached state.
+
+Optional service settings:
+
+- `CATALOG_INTERVAL_SECONDS`: catalogue refresh interval; default `10800` (three hours).
+- `DIGEST_CHECK_INTERVAL_SECONDS`: due-digest check interval; default `60`.
+- `JOB_DB_PATH`: defaults to local `jobs.db`; production should point inside the mounted volume.
 
 Refresh the shared catalogue without sending notifications or changing notifier state:
 

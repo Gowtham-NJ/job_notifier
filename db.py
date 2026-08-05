@@ -1,15 +1,21 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import sqlite3
 from pathlib import Path
 from typing import Any
 
-DB_PATH = Path("jobs.db")
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).resolve().parent / ".env")
+DB_PATH = Path(os.getenv("JOB_DB_PATH", "jobs.db")).expanduser()
 
 
 def connect() -> sqlite3.Connection:
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     connection = sqlite3.connect(DB_PATH)
+    connection.execute("PRAGMA busy_timeout = 30000")
     connection.row_factory = sqlite3.Row
     return connection
 
