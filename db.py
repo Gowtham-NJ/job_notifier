@@ -58,6 +58,16 @@ def init_db() -> None:
         )
         connection.execute(
             """
+            CREATE TABLE IF NOT EXISTS user_job_deliveries (
+                telegram_user_id INTEGER NOT NULL,
+                dedup_key TEXT NOT NULL,
+                delivered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (telegram_user_id, dedup_key)
+            )
+            """
+        )
+        connection.execute(
+            """
             CREATE TABLE IF NOT EXISTS bot_users (
                 telegram_user_id INTEGER PRIMARY KEY,
                 chat_id INTEGER NOT NULL,
@@ -85,6 +95,7 @@ def init_db() -> None:
             "deletion_previous_state",
             "digest_time",
             "digest_timezone",
+            "digest_last_run_local_date",
         ):
             if column not in existing_columns:
                 connection.execute(f"ALTER TABLE bot_users ADD COLUMN {column} TEXT")
@@ -187,7 +198,8 @@ def list_catalog_jobs(limit: int = 5000) -> list[dict[str, Any]]:
     try:
         rows = connection.execute(
             """
-            SELECT company, title, location, url, source, description, first_seen, last_seen
+            SELECT dedup_key, company, title, location, url, source, description,
+                first_seen, last_seen
             FROM job_catalog ORDER BY last_seen DESC, id DESC LIMIT ?
             """,
             (limit,),
@@ -532,11 +544,70 @@ def cancel_profile_deletion(telegram_user_id: int) -> None:
 def delete_bot_user(telegram_user_id: int) -> bool:
     connection = connect()
     try:
+        connection.execute(
+            "DELETE FROM user_job_deliveries WHERE telegram_user_id = ?", (telegram_user_id,)
+        )
         cursor = connection.execute(
             "DELETE FROM bot_users WHERE telegram_user_id = ?", (telegram_user_id,)
         )
         connection.commit()
         return cursor.rowcount > 0
+    finally:
+        connection.close()
+
+
+def list_digest_users(telegram_user_id: int | None = None) -> list[dict[str, Any]]:
+    connection = connect()
+    try:
+        if telegram_user_id is None:
+            rows = connection.execute(
+                """
+                SELECT * FROM bot_users
+                WHERE digest_enabled = 1 AND digest_time IS NOT NULL
+                    AND digest_timezone IS NOT NULL
+                """
+            ).fetchall()
+        else:
+            rows = connection.execute(
+                "SELECT * FROM bot_users WHERE telegram_user_id = ?", (telegram_user_id,)
+            ).fetchall()
+        return [dict(row) for row in rows]
+    finally:
+        connection.close()
+
+
+def delivered_job_keys(telegram_user_id: int) -> set[str]:
+    connection = connect()
+    try:
+        rows = connection.execute(
+            "SELECT dedup_key FROM user_job_deliveries WHERE telegram_user_id = ?",
+            (telegram_user_id,),
+        ).fetchall()
+        return {str(row["dedup_key"]) for row in rows}
+    finally:
+        connection.close()
+
+
+def record_digest_run(
+    telegram_user_id: int, dedup_keys: list[str], local_date: str
+) -> None:
+    connection = connect()
+    try:
+        connection.executemany(
+            """
+            INSERT OR IGNORE INTO user_job_deliveries (telegram_user_id, dedup_key)
+            VALUES (?, ?)
+            """,
+            [(telegram_user_id, key) for key in dedup_keys],
+        )
+        connection.execute(
+            """
+            UPDATE bot_users SET digest_last_run_local_date = ?,
+                updated_at = CURRENT_TIMESTAMP WHERE telegram_user_id = ?
+            """,
+            (local_date, telegram_user_id),
+        )
+        connection.commit()
     finally:
         connection.close()
 
