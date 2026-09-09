@@ -10,11 +10,12 @@ The notifier fetches public job feeds and career APIs, scores each role against 
 - Worldwide acceptance (`location_mode: "all"`) with Europe/UK and genuine remote roles receiving a ranking bonus.
 - Profile terms derived from Gowtham's CV: MD, DFT, QM/MM, electronic structure, charge transport, force-field parameterization, free-energy methods, Python/Fortran/C++, HPC, scientific software, structural bioinformatics, and atomistic ML.
 - High-priority and standard matching; senior/principal positions remain visible but are capped at standard priority.
+- Hard exclusions for doctoral training and experimental duties in the tailored notifier, while retaining computational postdocs and roles requiring an existing PhD.
 - Cross-source duplicate collapsing based on company, title, and location.
 - Safe first-run and per-source seeding, preventing old jobs from flooding notification channels.
 - GitHub Actions execution every three hours in `Europe/Prague`.
 - Telegram delivery by default, with optional Slack, Discord, ntfy, and Pushover fallbacks.
-- Forty-six fixture and logic tests.
+- Fixture, filtering, database, and notification regression tests.
 
 ## Source coverage
 
@@ -242,6 +243,10 @@ The workflow runs at minute 17 every three hours in the Prague timezone. It rest
 ## Safe upgrade behavior
 
 On the first real run, current matches are stored without being posted. When sources are added later, only those new sources are seeded. Later runs notify only genuinely new matches.
+
+The tailored profile enables `exclude_doctoral_training` and `exclude_experimental_roles` (both default to `true`). These exclusions run before scoring: doctoral researchers, Ph.D. positions, studentships, enrolment requirements, and clearly experimental or wet-lab duties cannot qualify through unrelated computational keywords. Existing-PhD requirements, postdoctoral fellowships, experimental collaborators, and computational analysis of experimental data remain eligible. These are text-based rules; listings that omit their duties can still need review.
+
+The interactive `/jobs` command and daily digests apply the same checks to existing catalogue rows. Doctoral training is excluded unless a user's target roles explicitly request it. Experimental roles are excluded for users whose science fields or target roles request computational or theoretical work; other users can still receive experimental science jobs. No database reset or migration is needed, and stored profiles, catalogue rows, and delivery history are preserved.
 
 ## Adding sources
 

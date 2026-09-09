@@ -80,6 +80,46 @@ class DigestTests(unittest.TestCase):
         post.assert_called_once()
         self.assertFalse(db.delivered_job_keys(101))
 
+    @patch("digest._post_json")
+    def test_existing_catalogue_excludes_phd_and_experimental_jobs_for_computational_digest(self, post):
+        db.save_user_fields(101, "Computational chemistry, biophysics")
+        db.save_user_skills(101, "Molecular dynamics, DFT, Python")
+        db.save_target_roles(101, "Postdoc, research scientist")
+        db.confirm_job_preferences(101)
+        jobs = [
+            {
+                "company": "Example Institute",
+                "title": "PhD Researcher in Computational Chemistry",
+                "description": "Molecular dynamics, DFT and Python.",
+                "url": "https://example.org/jobs/phd",
+            },
+            {
+                "company": "Example Institute",
+                "title": "Postdoc in Experimental Biophysics",
+                "description": "Primarily experimental work. Collaborators provide computational chemistry, molecular dynamics, DFT and Python analysis.",
+                "url": "https://example.org/jobs/experimental",
+            },
+            {
+                "company": "Example Institute",
+                "title": "Postdoc in Computational Chemistry",
+                "description": "PhD required. Develop molecular dynamics simulations in Python with experimental collaborators.",
+                "url": "https://example.org/jobs/computational",
+            },
+        ]
+        db.save_catalog_jobs(jobs)
+
+        with patch("builtins.print") as output:
+            result = run_digest(send=False, test_user_id=101)
+
+        self.assertEqual(result["matches"], 1)
+        rendered = " ".join(str(call.args[0]) for call in output.call_args_list)
+        self.assertIn("Postdoc in Computational Chemistry", rendered)
+        self.assertNotIn("PhD Researcher", rendered)
+        self.assertNotIn("Experimental Biophysics", rendered)
+        self.assertEqual(len(db.list_catalog_jobs()), 4)
+        self.assertFalse(db.delivered_job_keys(101))
+        post.assert_not_called()
+
     def test_duplicate_vacancy_urls_are_collapsed_and_all_keys_recordable(self):
         first = PersonalizedMatch(
             job={

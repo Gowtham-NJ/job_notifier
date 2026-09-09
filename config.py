@@ -48,6 +48,10 @@ def validate_profile(profile: dict[str, Any]) -> None:
     if high_priority_score < minimum_score:
         raise ConfigError("high_priority_score must be >= minimum_score")
 
+    for key in ("exclude_doctoral_training", "exclude_experimental_roles"):
+        if key in profile and not isinstance(profile[key], bool):
+            raise ConfigError(f"{key} must be a boolean")
+
 
 def validate_companies(companies: list[dict[str, Any]]) -> None:
     token_sources = {"greenhouse", "lever", "ashby", "recruitee", "workable", "smartrecruiters", "workday"}

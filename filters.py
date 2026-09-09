@@ -5,6 +5,8 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
+from eligibility import doctoral_training_reason, experimental_role_reason
+
 
 _SPACE_RE = re.compile(r"\s+")
 _TAG_RE = re.compile(r"<[^>]+>")
@@ -67,7 +69,19 @@ def evaluate_job(job: dict[str, Any], profile: dict[str, Any]) -> MatchResult:
     if not title:
         return MatchResult(False, 0, "rejected", "unspecified", False, ("missing title",))
 
-    hard_negative_hits = _hits(title, profile.get("hard_negative_title_terms", []))
+    exclusion = None
+    if profile.get("exclude_doctoral_training", True):
+        exclusion = doctoral_training_reason(job)
+    if not exclusion and profile.get("exclude_experimental_roles", True):
+        exclusion = experimental_role_reason(job)
+    if exclusion:
+        return MatchResult(False, -20, "rejected", classify_seniority(title), True, (exclusion,))
+
+    hard_negative_hits = [
+        term for term in profile.get("hard_negative_title_terms", [])
+        if _normalise(term)
+        and re.search(rf"(?<![\w-]){re.escape(_normalise(term))}s?(?!\w)", title)
+    ]
     if hard_negative_hits:
         return MatchResult(
             False,
