@@ -80,6 +80,7 @@ _EXPERIMENTAL_METHODS = re.compile(
     r"flow cytometry|microscopy|cryo[ -]?em|mass spectrometry|"
     r"assay (?:development|design)|develop\w* (?:\w+ )?assays|"
     r"animal (?:handling|experiments)|in vivo experiments|patch clamp|"
+    r"(?:conduct|perform)(?:ing)? (?:laboratory |wet[ -]lab )?experiments|"
     r"electrophysiology|fabrication|experimental (?:measurements|characteri[sz]ation))\b"
 )
 _NEGATED_EXPERIMENTS = re.compile(

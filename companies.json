@@ -85,7 +85,9 @@
     "url": "https://www.findapostdoc.com/?PP=50&Sort=pdc",
     "max_detail_pages": 50,
     "enabled": false,
-    "disabled_reason": "Live runs consistently return HTTP 403 from the server environment. Kept disabled to avoid a failed request every three hours."
+    "disabled_reason": "Live runs consistently return HTTP 403 from the server environment. Kept disabled to avoid a failed request every three hours.",
+    "access_checked_at": "2026-09-09",
+    "access_evidence_url": "https://www.findapostdoc.com/"
   },
   {
     "company": "ResearchJobs.cz",
@@ -430,7 +432,9 @@
     "source_type": "restricted",
     "url": "https://www.nature.com/naturecareers/jobs/",
     "enabled": false,
-    "disabled_reason": "Nature robots.txt disallows its job-search and job-RSS paths. Some Nature Careers vacancies are still discovered through ScholarshipDB."
+    "disabled_reason": "Nature robots.txt disallows job-search and job-RSS paths; no supported public feed verified.",
+    "access_checked_at": "2026-09-09",
+    "access_evidence_url": "https://www.nature.com/robots.txt"
   },
   {
     "company": "EuroScienceJobs",
@@ -445,5 +449,131 @@
     "url": "https://www.eurojobs.com/",
     "enabled": false,
     "disabled_reason": "Its published terms restrict automated scraping."
+  },
+  {
+    "company": "Science Careers",
+    "source_type": "sciencecareers",
+    "url": "https://jobs.sciencecareers.org/jobsrss/?Keywords=computational+chemistry",
+    "urls": [
+      "https://jobs.sciencecareers.org/jobsrss/?Keywords=computational+chemistry",
+      "https://jobs.sciencecareers.org/jobsrss/?Keywords=computational+biophysics",
+      "https://jobs.sciencecareers.org/jobsrss/?Keywords=molecular+dynamics",
+      "https://jobs.sciencecareers.org/jobsrss/?Keywords=quantum+chemistry",
+      "https://jobs.sciencecareers.org/jobsrss/?Keywords=scientific+computing"
+    ],
+    "max_detail_pages": 60,
+    "enabled": true
+  },
+  {
+    "company": "University Positions",
+    "source_type": "universitypositions",
+    "url": "https://universitypositions.eu/jobs",
+    "urls": [
+      "https://universitypositions.eu/jobs?filters%5B30895%5D=computational",
+      "https://universitypositions.eu/jobs?filters%5B30895%5D=molecular",
+      "https://universitypositions.eu/jobs?filters%5B30895%5D=quantum",
+      "https://universitypositions.eu/jobs?filters%5B30895%5D=scientific+computing"
+    ],
+    "max_detail_pages": 40,
+    "enabled": true
+  },
+  {
+    "company": "Academic Positions",
+    "source_type": "restricted",
+    "url": "https://academicpositions.com/jobs",
+    "enabled": false,
+    "disabled_reason": "Published terms require written permission to copy, process or store listings. No public integration with such permission verified.",
+    "access_checked_at": "2026-09-09",
+    "access_evidence_url": "https://academicpositions.com/terms-of-use"
+  },
+  {
+    "company": "Times Higher Education Jobs",
+    "source_type": "restricted",
+    "url": "https://www.timeshighereducation.com/unijobs/",
+    "enabled": false,
+    "disabled_reason": "Website Terms of Use prohibit automated data gathering; robots.txt also disallows the job RSS and keyword-search paths.",
+    "access_checked_at": "2026-09-09",
+    "access_evidence_url": "https://www.timeshighereducation.com/website-terms-of-use"
+  },
+  {
+    "company": "HigherEdJobs",
+    "source_type": "restricted",
+    "url": "https://www.higheredjobs.com/",
+    "enabled": false,
+    "disabled_reason": "The RSS directory returns an Incapsula request-unsuccessful challenge instead of a feed, even with HTTP 200.",
+    "access_checked_at": "2026-09-09",
+    "access_evidence_url": "https://www.higheredjobs.com/rss/"
+  },
+  {
+    "company": "ResearchGate Jobs",
+    "source_type": "restricted",
+    "url": "https://www.researchgate.net/jobs",
+    "enabled": false,
+    "disabled_reason": "Terms of service prohibit scripts, robots and scraping; no authorized public feed verified.",
+    "access_checked_at": "2026-09-09",
+    "access_evidence_url": "https://www.researchgate.net/terms-of-service"
+  },
+  {
+    "company": "PostdocJobs",
+    "source_type": "restricted",
+    "url": "https://www.postdocjobs.com/",
+    "enabled": false,
+    "disabled_reason": "Terms prohibit robots/agents and aggregation or copying of listings without authorization.",
+    "access_checked_at": "2026-09-09",
+    "access_evidence_url": "https://www.postdocjobs.com/site/terms"
+  },
+  {
+    "company": "Postdoc Opportunities",
+    "source_type": "restricted",
+    "url": "https://www.postdocopportunities.com/",
+    "enabled": false,
+    "disabled_reason": "Requested hostname does not resolve; no working official job feed verified.",
+    "access_checked_at": "2026-09-09",
+    "access_evidence_url": "https://www.postdocopportunities.com/"
+  },
+  {
+    "company": "INOMICS",
+    "source_type": "restricted",
+    "url": "https://inomics.com/jobs",
+    "enabled": false,
+    "disabled_reason": "Terms and conditions section 3b prohibit automated access without permission.",
+    "access_checked_at": "2026-09-09",
+    "access_evidence_url": "https://inomics.com/terms-and-conditions"
+  },
+  {
+    "company": "EMBO Careers",
+    "source_type": "restricted",
+    "url": "https://www.embo.org/the-embo-communities/work-with-an-embo-community-member/",
+    "enabled": false,
+    "disabled_reason": "Requested careers.embo.org hostname does not resolve. Official community vacancies page currently has no jobs; a working vacancy parser/feed could not be verified.",
+    "access_checked_at": "2026-09-09",
+    "access_evidence_url": "https://www.embo.org/the-embo-communities/work-with-an-embo-community-member/"
+  },
+  {
+    "company": "Society for Neuroscience Career Center",
+    "source_type": "restricted",
+    "url": "https://neurojobs.sfn.org/",
+    "enabled": false,
+    "disabled_reason": "Official NeuroJobs hostname returns a JavaScript bot-verification challenge. Requested careers.sfn.org is not the current service.",
+    "access_checked_at": "2026-09-09",
+    "access_evidence_url": "https://www.sfn.org/careers/neurojobs-career-center"
+  },
+  {
+    "company": "New Scientist Jobs",
+    "source_type": "restricted",
+    "url": "https://www.newscientist.com/jobs-closed/",
+    "enabled": false,
+    "disabled_reason": "The jobs service has closed; jobs.newscientist.com redirects to its closure notice.",
+    "access_checked_at": "2026-09-09",
+    "access_evidence_url": "https://www.newscientist.com/jobs-closed/"
+  },
+  {
+    "company": "Indeed Academic Jobs",
+    "source_type": "restricted",
+    "url": "https://www.indeed.com/",
+    "enabled": false,
+    "disabled_reason": "No usable open job-search feed verified; robots.txt disallows RSS and job-detail query paths for general crawlers.",
+    "access_checked_at": "2026-09-09",
+    "access_evidence_url": "https://www.indeed.com/robots.txt"
   }
 ]

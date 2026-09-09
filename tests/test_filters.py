@@ -153,6 +153,7 @@ class FilterTests(unittest.TestCase):
             ("Postdoc in Molecular Biophysics", "You will perform cell culture and analyze data using molecular dynamics."),
             ("Scientist in Computational Chemistry", "Collaborate with computational chemistry teams and perform protein purification, cell culture and microscopy."),
             ("Scientist in Computational Chemistry", "In collaboration with experimental teams, you will conduct organic synthesis and protein purification."),
+            ("Postdoctoral Research Scientists - Materials and Devices for Life Sciences", "You will design and conduct experiments. A PhD in computational chemistry, biology or materials science is welcome. Computational modelling experience is desirable."),
         ):
             with self.subTest(title=title, description=description):
                 result = evaluate_job({"title": title, "description": description}, PROFILE)
@@ -167,6 +168,7 @@ class FilterTests(unittest.TestCase):
             "You will compare molecular dynamics simulations with experimental measurements.",
             "Experience with microscopy data analysis is desirable. Develop molecular dynamics software.",
             "This is not a wet-lab role. Use molecular dynamics and DFT.",
+            "You will conduct computational experiments using molecular dynamics and DFT.",
         ):
             with self.subTest(description=description):
                 self.assertTrue(evaluate_job({

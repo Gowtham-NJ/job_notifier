@@ -2,6 +2,8 @@
 
 ## 2026-09-09
 
+- Reviewed all 19 distinct requested academic portals; added Science Careers and University Positions with structured detail parsing and documented unavailable/restricted sites.
+- Added new-source seeding and portal parser regressions; preserved doctoral and experimental-role exclusions.
 - Exclude doctoral training variants and experimental duties before tailored job scoring.
 - Apply the same exclusions to personalized catalogue matches and digests, respecting doctoral opt-ins and experimental users' preferences.
 - Preserve existing-PhD qualifications, postdoctoral fellowships, computational analysis of experimental data, and notification history.

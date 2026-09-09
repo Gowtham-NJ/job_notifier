@@ -57,6 +57,8 @@ def validate_companies(companies: list[dict[str, Any]]) -> None:
     token_sources = {"greenhouse", "lever", "ashby", "recruitee", "workable", "smartrecruiters", "workday"}
     url_sources = {
         "rss",
+        "sciencecareers",
+        "universitypositions",
         "scholarshipdb",
         "findapostdoc",
         "researchjobs_cz",

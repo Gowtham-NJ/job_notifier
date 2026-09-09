@@ -6,7 +6,7 @@ The notifier fetches public job feeds and career APIs, scores each role against 
 
 ## What this version includes
 
-- **58 enabled sources** and 6 documented disabled sources.
+- **60 enabled sources** and 17 documented disabled sources.
 - Worldwide acceptance (`location_mode: "all"`) with Europe/UK and genuine remote roles receiving a ranking bonus.
 - Profile terms derived from Gowtham's CV: MD, DFT, QM/MM, electronic structure, charge transport, force-field parameterization, free-energy methods, Python/Fortran/C++, HPC, scientific software, structural bioinformatics, and atomistic ML.
 - High-priority and standard matching; senior/principal positions remain visible but are capped at standard priority.
@@ -39,6 +39,7 @@ Configured target employers include Schrodinger, Isomorphic Labs, Google DeepMin
 - jobRxiv chemistry and bioinformatics listings
 - MathJobs relevant computational listings
 - AcademicKeys Science and Engineering RSS feeds
+- Science Careers keyword RSS feeds, enriched with full structured vacancy details
 
 ### Broad academic and institutional sources
 
@@ -54,6 +55,9 @@ Configured target employers include Schrodinger, Isomorphic Labs, Google DeepMin
 - Inria
 - EMBL and EMBL partner opportunities
 - CERN
+- University Positions public keyword listings and structured vacancy details
+
+The September 2026 review covers all 19 distinct portals in the requested list (EURAXESS was listed twice). See [the portal audit](PORTAL_AUDIT.md#requested-portals--2026-09-09) for each site's status and evidence. Newly enabled portals are seeded automatically before they can send alerts.
 
 ### University RSS feeds
 
@@ -72,6 +76,12 @@ Remotive is implemented but disabled because its public API recommends a lower p
 - Nature Careers: automated access to relevant job paths is disallowed by its robots policy.
 - EuroScienceJobs and EuroJobs: published terms restrict automated extraction.
 - Remotive: permitted, but disabled in the three-hour workflow to respect its recommended polling frequency.
+- Academic Positions, Times Higher Education Jobs, PostdocJobs, INOMICS, and ResearchGate: published terms restrict the intended automated collection.
+- HigherEdJobs and Society for Neuroscience NeuroJobs: current responses are bot challenges, not usable listing data.
+- Postdoc Opportunities: requested hostname does not resolve.
+- EMBO Careers: the requested hostname does not resolve; its official community vacancies page currently has no listings against which to verify an adapter.
+- New Scientist Jobs: the jobs service has closed.
+- Indeed: no usable open job-search feed verified.
 
 The notifier does not scrape LinkedIn, Indeed, Glassdoor, or ResearchGate. These sources are fragile, login-gated, or contractually risky for unattended scraping.
 
@@ -258,7 +268,7 @@ recruitee, workable, rss, euraxess, academictransfer,
 academicjobsonline, jobs_ac_uk, jobbnorge, arbeitnow,
 researchjobs_cz, ccl, charmm_gui, molssi, cecam, iscb,
 society_rse, max_planck, leibniz, inria, tyc,
-helmholtz_ai, embl_partners, mathjobs, jobrxiv,
+helmholtz_ai, embl_partners, mathjobs, jobrxiv, sciencecareers, universitypositions,
 jobicy, himalayas, remotive
 ```
 

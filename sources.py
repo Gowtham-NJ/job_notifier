@@ -1713,6 +1713,11 @@ def fetch_jobs(source: dict[str, Any]) -> list[dict[str, str]]:
         return fetch_workday_jobs(source["token"], company)
     if source_type == "rss":
         return fetch_rss_jobs(source["url"], company)
+    if source_type in {"sciencecareers", "universitypositions"}:
+        from academic_portals import fetch_sciencecareers_jobs, fetch_universitypositions_jobs
+
+        fetcher = fetch_sciencecareers_jobs if source_type == "sciencecareers" else fetch_universitypositions_jobs
+        return fetcher(source, company)
     if source_type == "scholarshipdb":
         return fetch_scholarshipdb_jobs(source, company)
     if source_type == "findapostdoc":
